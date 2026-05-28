@@ -1,0 +1,52 @@
+version: 2
+
+project_name: jlink-cli
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: jlink-cli
+    main: ./cmd/jlink-cli
+    binary: jlink-cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/guajun/jlink-cli/internal/buildinfo.Version={{.Version}} -X github.com/guajun/jlink-cli/internal/buildinfo.Commit={{.Commit}} -X github.com/guajun/jlink-cli/internal/buildinfo.Date={{.Date}}
+
+archives:
+  - id: default
+    builds:
+      - jlink-cli
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - examples/*
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
