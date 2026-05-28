@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,6 +66,8 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runInspect(args[1:], jsonOutput)
 	case "connect":
 		return runConnect(args[1:], jsonOutput)
+	case "script":
+		return runScript(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -118,7 +121,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "connect", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "script", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
 }
@@ -205,6 +208,18 @@ func newFlagSet(name string) *flag.FlagSet {
 
 func usageError(err error) error {
 	return &cliError{Code: "usage.invalid_flags", Message: err.Error(), Exit: ExitUsage}
+}
+
+func parseRequiredUint(name string, value string) (uint64, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return 0, &cliError{Code: "usage.missing_" + name, Message: fmt.Sprintf("%s is required", name), Exit: ExitUsage}
+	}
+	parsed, err := strconv.ParseUint(trimmed, 0, 64)
+	if err != nil {
+		return 0, &cliError{Code: "usage.invalid_" + name, Message: err.Error(), Exit: ExitUsage}
+	}
+	return parsed, nil
 }
 
 func errorCode(err error) string {
