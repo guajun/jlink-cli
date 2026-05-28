@@ -73,6 +73,8 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runBreakpoint(args[1:], jsonOutput)
 	case "callstack":
 		return runCallStack(args[1:], jsonOutput)
+	case "dll":
+		return runDLL(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -126,7 +128,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "connect", "flash", "memory", "breakpoint", "callstack", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "flash", "memory", "breakpoint", "callstack", "dll", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
 }
@@ -271,6 +273,7 @@ Commands:
 	memory    Read target memory, live or halt/resume depending on flags
 	breakpoint Set or clear target breakpoints
 	callstack Prepare GDB commands for halted-target backtraces
+  dll       Diagnose direct J-Link DLL loading without opening a probe session
   run       Parse an agent request; physical J-Link operations are not enabled in the prototype
 
 Global conventions:

@@ -98,3 +98,28 @@ func TestMemoryReadDefaultsToDryRun(t *testing.T) {
 		t.Fatalf("expected generated J-Link script")
 	}
 }
+
+func TestDLLDoctorReportsExplicitCandidateJSON(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Main([]string{"dll", "doctor", "--dll-path", "does-not-exist.dll", "--json"}, &stdout, &stderr)
+	if exitCode != ExitOK && exitCode != ExitNotReady {
+		t.Fatalf("unexpected exit, got %d: %s", exitCode, stderr.String())
+	}
+
+	var response struct {
+		Result struct {
+			Candidates []struct {
+				Path   string `json:"path"`
+				Source string `json:"source"`
+			} `json:"candidates"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if len(response.Result.Candidates) == 0 || response.Result.Candidates[0].Source != "flag" {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+}

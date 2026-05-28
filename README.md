@@ -38,6 +38,7 @@ jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --wi
 jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --halt --dry-run
 jlink-cli breakpoint set --device STM32H750VB --address 0x08000100 --dry-run
 jlink-cli callstack --device STM32H750VB --elf firmware.elf --dry-run
+jlink-cli dll doctor --json
 jlink-cli run --input '{"action":"ping"}'
 ```
 
@@ -50,6 +51,8 @@ jlink-cli run --input '{"action":"ping"}'
 `flash program` and `breakpoint` are potentially destructive or exclusive operations. They also default to dry-run behavior and require `--yes` before the target is touched.
 
 `callstack` prepares a GDB Server plus `arm-none-eabi-gdb` backtrace command for the case where the MCU is already halted at a breakpoint. It defaults to dry-run and requires `--yes` before starting `JLinkGDBServerCL` and GDB.
+
+`dll doctor` loads the SEGGER J-Link DLL and probes the symbols needed for the future high-performance backend. It does not open a J-Link probe session or connect to the target.
 
 ## Design Notes
 
