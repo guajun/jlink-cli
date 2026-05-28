@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="jlink-cli is a Go-first command-line interface for AI agents working with SEGGER J-Link tooling.">
+  <title>jlink-cli</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="jlink-cli home">
+      <span class="brand-mark">JL</span>
+      <span>jlink-cli</span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="https://github.com/guajun/jlink-cli/releases/latest">Release</a>
+      <a href="https://github.com/guajun/jlink-cli">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Binary-distributed J-Link tooling for agents</p>
+        <h1>jlink-cli</h1>
+        <p class="lede">A Go-first command-line interface that gives AI agents predictable, non-interactive access to SEGGER J-Link discovery, diagnostics, and scripted connection workflows.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#install">Install</a>
+          <a class="button secondary" href="https://github.com/guajun/jlink-cli/releases/latest">Latest release</a>
+        </div>
+      </div>
+      <div class="terminal" aria-label="Example command output">
+        <div class="terminal-bar"><span></span><span></span><span></span></div>
+        <pre><code>$ jlink-cli doctor --json
+{
+  "ok": true,
+  "result": {
+    "selected": "JLinkExe"
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="install" class="band">
+      <div class="section-heading">
+        <p class="eyebrow">Install from GitHub Releases</p>
+        <h2>One-line installers</h2>
+      </div>
+      <div class="install-grid">
+        <article class="install-card">
+          <h3>Windows PowerShell</h3>
+          <p>Downloads the latest Windows release asset and installs <code>jlink-cli.exe</code> into <code>%LOCALAPPDATA%\Programs\jlink-cli\bin</code>.</p>
+          <button class="copy-button" data-copy="irm https://guajun.github.io/jlink-cli/install.ps1 | iex" type="button" aria-label="Copy Windows install command">Copy</button>
+          <pre><code>irm https://guajun.github.io/jlink-cli/install.ps1 | iex</code></pre>
+        </article>
+        <article class="install-card">
+          <h3>Linux shell</h3>
+          <p>Downloads the latest Linux release asset and installs <code>jlink-cli</code> into <code>~/.local/bin</code>.</p>
+          <button class="copy-button" data-copy="curl -fsSL https://guajun.github.io/jlink-cli/install.sh | sh" type="button" aria-label="Copy Linux install command">Copy</button>
+          <pre><code>curl -fsSL https://guajun.github.io/jlink-cli/install.sh | sh</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <article>
+        <h2>Agent-first defaults</h2>
+        <p>Commands are designed for stable JSON output, stderr diagnostics, and non-interactive execution so automation can inspect local J-Link readiness safely.</p>
+      </article>
+      <article>
+        <h2>Release assets</h2>
+        <p>GoReleaser publishes single-file binaries for Windows, Linux, and macOS on every tagged release.</p>
+      </article>
+      <article>
+        <h2>Physical sessions stay explicit</h2>
+        <p>Connection workflows default to dry-run behavior unless callers opt in with <code>--yes</code>.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <span>jlink-cli</span>
+    <a href="https://github.com/guajun/jlink-cli/blob/main/README.md">README</a>
+    <a href="https://github.com/guajun/jlink-cli/releases/latest">Releases</a>
+  </footer>
+
+  <script src="./site.js"></script>
+</body>
+</html>
