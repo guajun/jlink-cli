@@ -11,5 +11,6 @@ All notable changes to this project will be documented in this file.
 - Add staged `flash program`, `memory read`, `breakpoint`, and `callstack` command surfaces.
 - Separate live memory reads from halt/read/resume memory reads.
 - Add `dll doctor` for non-invasive J-Link DLL loading and symbol probing.
+- Add dry-run guarded `dll connect` for direct J-Link DLL target sessions.
 - Validate initial connection flow with STM32H750VB over SWD.
 - Add Go tests and CI workflow.

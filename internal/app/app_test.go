@@ -123,3 +123,33 @@ func TestDLLDoctorReportsExplicitCandidateJSON(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", response)
 	}
 }
+
+func TestDLLConnectDefaultsToDryRun(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Main([]string{"dll", "connect", "--device", "STM32H750VB", "--json"}, &stdout, &stderr)
+	if exitCode != ExitOK {
+		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+	}
+
+	var response struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			DryRun          bool `json:"dry_run"`
+			ConnectionTouch bool `json:"connection_touched"`
+			Plan            struct {
+				Commands []string `json:"commands"`
+			} `json:"plan"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if !response.OK || !response.Result.DryRun || response.Result.ConnectionTouch {
+		t.Fatalf("unexpected dry-run response: %#v", response)
+	}
+	if len(response.Result.Plan.Commands) == 0 {
+		t.Fatalf("expected DLL call plan")
+	}
+}

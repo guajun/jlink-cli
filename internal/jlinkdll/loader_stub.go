@@ -25,3 +25,19 @@ func (dll *DLL) Path() string {
 func (dll *DLL) Close() error {
 	return nil
 }
+
+func (dll *DLL) call0(name string) (uintptr, error) {
+	return 0, fmt.Errorf("runtime J-Link DLL loading is not implemented on this platform yet")
+}
+
+func (dll *DLL) call1(name string, arg uintptr) (uintptr, error) {
+	return 0, fmt.Errorf("runtime J-Link DLL loading is not implemented on this platform yet")
+}
+
+func (dll *DLL) call2(name string, first uintptr, second uintptr) (uintptr, error) {
+	return 0, fmt.Errorf("runtime J-Link DLL loading is not implemented on this platform yet")
+}
+
+func (dll *DLL) execCommand(command string) (int32, string, error) {
+	return 0, "", fmt.Errorf("runtime J-Link DLL loading is not implemented on this platform yet")
+}

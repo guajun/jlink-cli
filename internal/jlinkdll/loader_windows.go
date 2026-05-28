@@ -5,6 +5,7 @@ package jlinkdll
 import (
 	"fmt"
 	"syscall"
+	"unsafe"
 )
 
 func ProbeSymbols(path string, names []string) ([]SymbolStatus, error) {
@@ -57,4 +58,55 @@ func (dll *DLL) proc(name string) (*syscall.Proc, error) {
 		return nil, fmt.Errorf("J-Link DLL is not loaded")
 	}
 	return dll.dll.FindProc(name)
+}
+
+func (dll *DLL) call0(name string) (uintptr, error) {
+	proc, err := dll.proc(name)
+	if err != nil {
+		return 0, err
+	}
+	ret, _, _ := proc.Call()
+	return ret, nil
+}
+
+func (dll *DLL) call1(name string, arg uintptr) (uintptr, error) {
+	proc, err := dll.proc(name)
+	if err != nil {
+		return 0, err
+	}
+	ret, _, _ := proc.Call(arg)
+	return ret, nil
+}
+
+func (dll *DLL) call2(name string, first uintptr, second uintptr) (uintptr, error) {
+	proc, err := dll.proc(name)
+	if err != nil {
+		return 0, err
+	}
+	ret, _, _ := proc.Call(first, second)
+	return ret, nil
+}
+
+func (dll *DLL) execCommand(command string) (int32, string, error) {
+	proc, err := dll.proc("JLINKARM_ExecCommand")
+	if err != nil {
+		return 0, "", err
+	}
+	commandBytes, err := syscall.BytePtrFromString(command)
+	if err != nil {
+		return 0, "", err
+	}
+	errBuffer := make([]byte, 4096)
+	ret, _, _ := proc.Call(uintptr(unsafe.Pointer(commandBytes)), uintptr(unsafe.Pointer(&errBuffer[0])), uintptr(len(errBuffer)))
+	message := cString(errBuffer)
+	return int32(ret), message, nil
+}
+
+func cString(buffer []byte) string {
+	for index, value := range buffer {
+		if value == 0 {
+			return string(buffer[:index])
+		}
+	}
+	return string(buffer)
 }
