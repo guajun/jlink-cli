@@ -1,0 +1,7 @@
+{
+  "flash_program": "jlink-cli flash program --device STM32H750VB --file firmware.bin --address 0x08000000 --verify --dry-run --json",
+  "memory_read_live": "jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --dry-run --json",
+  "memory_read_halted": "jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --halt --dry-run --json",
+  "breakpoint_set": "jlink-cli breakpoint set --device STM32H750VB --address 0x08000100 --dry-run --json",
+  "callstack": "jlink-cli callstack --device STM32H750VB --elf firmware.elf --dry-run --json"
+}

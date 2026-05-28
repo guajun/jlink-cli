@@ -69,3 +69,32 @@ func TestRunParsesInputWithoutExclusiveDeviceUse(t *testing.T) {
 		t.Fatalf("expected non-exclusive prototype note")
 	}
 }
+
+func TestMemoryReadDefaultsToDryRun(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Main([]string{"memory", "read", "--device", "STM32H750VB", "--address", "0x20000000", "--length", "16", "--json"}, &stdout, &stderr)
+	if exitCode != ExitOK {
+		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+	}
+
+	var response struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			DryRun  bool `json:"dry_run"`
+			Command struct {
+				Script []string `json:"script"`
+			} `json:"command"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if !response.OK || !response.Result.DryRun {
+		t.Fatalf("expected ok dry-run response, got %#v", response)
+	}
+	if len(response.Result.Command.Script) == 0 {
+		t.Fatalf("expected generated J-Link script")
+	}
+}

@@ -65,6 +65,14 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runInspect(args[1:], jsonOutput)
 	case "connect":
 		return runConnect(args[1:], jsonOutput)
+	case "flash":
+		return runFlash(args[1:], jsonOutput)
+	case "memory":
+		return runMemory(args[1:], jsonOutput)
+	case "breakpoint":
+		return runBreakpoint(args[1:], jsonOutput)
+	case "callstack":
+		return runCallStack(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -118,7 +126,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "connect", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "flash", "memory", "breakpoint", "callstack", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
 }
@@ -259,6 +267,10 @@ Commands:
   doctor    Diagnose local J-Link CLI availability without opening a device session
   inspect   Print command and platform metadata
 	connect   Test a J-Link Commander connection; requires --yes to open a physical session
+	flash     Program firmware through J-Link Commander
+	memory    Read target memory, live or halt/resume depending on flags
+	breakpoint Set or clear target breakpoints
+	callstack Prepare GDB commands for halted-target backtraces
   run       Parse an agent request; physical J-Link operations are not enabled in the prototype
 
 Global conventions:
