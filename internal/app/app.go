@@ -309,20 +309,23 @@ func writeHumanUsage(stderr io.Writer) {
 }
 
 func usage() string {
-	return `jlink-cli is a non-interactive command-line interface for AI agents working with SEGGER J-Link tools.
-
-Usage:
-  jlink-cli <command> [flags]
-
-Commands:
-  version   Print build and protocol version information
-  doctor    Diagnose local J-Link CLI availability without opening a device session
-  inspect   Print command and platform metadata
-	connect   Test a J-Link Commander connection; requires --yes to open a physical session
-  run       Parse an agent request; physical J-Link operations are not enabled in the prototype
-
-Global conventions:
-  Machine-readable results go to stdout. Diagnostics and errors go to stderr.
-  Use --json on commands that support human output.
-`
+	return "jlink-cli is a non-interactive command-line interface for AI agents working with SEGGER J-Link tools.\n" +
+		"\n" +
+		"Usage:\n" +
+		"  jlink-cli <command> [flags]\n" +
+		"\n" +
+		"Commands:\n" +
+		"  version   Print build and protocol version information\n" +
+		"  doctor    Diagnose local J-Link CLI availability without opening a device session\n" +
+		"  inspect   Print command and platform metadata\n" +
+		"  connect   Test a J-Link Commander connection; requires --yes to open a physical session\n" +
+		"  script    Generate or execute J-Link Commander scripts\n" +
+		"  flash     Generate or execute a flash load script; requires --yes to execute\n" +
+		"  memory    Generate or execute a memory read script; requires --yes to execute\n" +
+		"  target    Generate or execute target halt/run/reset scripts; requires --yes to execute\n" +
+		"  run       Parse or execute a supported agent request\n" +
+		"\n" +
+		"Global conventions:\n" +
+		"  Machine-readable results go to stdout. Diagnostics and errors go to stderr.\n" +
+		"  Use --json on commands that support human output.\n"
 }
