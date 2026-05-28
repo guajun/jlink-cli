@@ -35,8 +35,56 @@ type MemoryReadOptions struct {
 	Halt    bool
 }
 
+type FlashOptions struct {
+	TargetOptions
+	File    string
+	Address uint64
+	Verify  bool
+	Reset   bool
+}
+
+type BreakpointOptions struct {
+	TargetOptions
+	Action  string
+	Address uint64
+	Halt    bool
+	Run     bool
+}
+
 func ProbeScript() Script {
 	return build(ProbeOnly, []string{"ExitOnError 1", "ShowEmuList", "q"})
+}
+
+func ConnectScript(opts TargetOptions) (Script, error) {
+	commands := targetPrelude(opts)
+	commands = append(commands, "q")
+	return build(TargetSession, commands), nil
+}
+
+func TargetControlScript(opts TargetOptions, action string) (Script, error) {
+	normalized := strings.ToLower(strings.TrimSpace(action))
+	if normalized != "reset" && normalized != "halt" && normalized != "go" {
+		return Script{}, fmt.Errorf("target action must be reset, halt, or go")
+	}
+	commands := targetPrelude(opts)
+	commands = append(commands, normalized, "q")
+	return build(TargetSession, commands), nil
+}
+
+func FlashScript(opts FlashOptions) (Script, error) {
+	if strings.TrimSpace(opts.File) == "" {
+		return Script{}, fmt.Errorf("missing firmware file")
+	}
+	commands := targetPrelude(opts.TargetOptions)
+	if opts.Reset {
+		commands = append(commands, "reset")
+	}
+	commands = append(commands, fmt.Sprintf("loadfile %s, %s", opts.File, formatHex(opts.Address)))
+	if opts.Verify {
+		commands = append(commands, fmt.Sprintf("verifybin %s, %s", opts.File, formatHex(opts.Address)))
+	}
+	commands = append(commands, "q")
+	return build(Destructive, commands), nil
 }
 
 func MemoryReadScript(opts MemoryReadOptions) (Script, error) {
@@ -52,6 +100,27 @@ func MemoryReadScript(opts MemoryReadOptions) (Script, error) {
 	}
 	commands = append(commands, fmt.Sprintf("mem%d %s, %s", opts.Width, formatHex(opts.Address), formatHex(opts.Length)))
 	if opts.Halt {
+		commands = append(commands, "go")
+	}
+	commands = append(commands, "q")
+	return build(TargetSession, commands), nil
+}
+
+func BreakpointScript(opts BreakpointOptions) (Script, error) {
+	action := strings.ToLower(strings.TrimSpace(opts.Action))
+	if action != "set" && action != "clear" {
+		return Script{}, fmt.Errorf("breakpoint action must be set or clear")
+	}
+	commands := targetPrelude(opts.TargetOptions)
+	if opts.Halt {
+		commands = append(commands, "halt")
+	}
+	if action == "set" {
+		commands = append(commands, "SetBP "+formatHex(opts.Address))
+	} else {
+		commands = append(commands, "ClearBP "+formatHex(opts.Address))
+	}
+	if opts.Run {
 		commands = append(commands, "go")
 	}
 	commands = append(commands, "q")

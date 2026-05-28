@@ -39,3 +39,28 @@ func TestMemoryReadScriptHaltResume(t *testing.T) {
 		t.Fatalf("expected halt/read/go sequence:\n%s", script.Text)
 	}
 }
+
+func TestFlashScript(t *testing.T) {
+	script, err := FlashScript(FlashOptions{TargetOptions: TargetOptions{Device: "STM32H750VB"}, File: "build/app.elf", Address: 0x08000000, Verify: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if script.Classification != Destructive || !script.RequiresConfirmation {
+		t.Fatalf("unexpected flash script metadata: %#v", script)
+	}
+	for _, want := range []string{"loadfile build/app.elf, 0x8000000", "verifybin build/app.elf, 0x8000000"} {
+		if !strings.Contains(script.Text, want) {
+			t.Fatalf("expected %q in script:\n%s", want, script.Text)
+		}
+	}
+}
+
+func TestBreakpointScript(t *testing.T) {
+	script, err := BreakpointScript(BreakpointOptions{Action: "set", Address: 0x08000100, Halt: true, Run: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(script.Text, "halt\nSetBP 0x8000100\ngo") {
+		t.Fatalf("expected halt/set/go sequence:\n%s", script.Text)
+	}
+}

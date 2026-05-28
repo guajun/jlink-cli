@@ -50,7 +50,10 @@ jlink-cli doctor --json
 jlink-cli inspect --json
 jlink-cli connect --device STM32H750VB --interface SWD --speed 4000 --dry-run
 jlink-cli script probe --json
+jlink-cli script connect --json
+jlink-cli script flash --file build/app.elf --address 0x08000000 --json
 jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --json
+jlink-cli script breakpoint-set --address 0x08000100 --json
 jlink-cli flash program --device STM32H750VB --file firmware.bin --address 0x08000000 --verify --dry-run
 jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --dry-run
 jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --halt --dry-run
@@ -63,7 +66,7 @@ jlink-cli run --input '{"action":"ping"}'
 
 `connect` prepares a J-Link Commander session using a short script containing `connect` and `q`. It defaults to dry-run behavior unless `--yes` is passed, so agents can inspect the exact command before opening an exclusive physical probe session.
 
-`script` generates J-Link CommanderScript text without executing it. `script probe` is probe-only, while target scripts such as `script memory-read` are marked as requiring confirmation before execution.
+`script` generates J-Link CommanderScript text without executing it by default. `script probe` is probe-only, while target scripts such as `script connect`, `script flash`, `script memory-read`, and `script breakpoint-set` are marked as requiring confirmation. Passing `--yes` executes the generated script through `JLink.exe -NoGui 1 -CommanderScript <temp-script>`.
 
 `memory read` has two modes. The default live mode does not issue `h` before reading; it is intended to approximate non-blocking reads for addresses that J-Link can access while the MCU is running. Passing `--halt` emits a halt/read/resume script for the stopped-at-breakpoint case.
 

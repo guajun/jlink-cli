@@ -54,6 +54,21 @@ connect
 q
 ```
 
+CLI generation:
+
+```powershell
+jlink-cli script connect --json
+jlink-cli script flash --file build/app.elf --address 0x08000000 --json
+jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --json
+jlink-cli script breakpoint-set --address 0x08000100 --json
+```
+
+Only run target-session or destructive scripts after confirmation:
+
+```powershell
+jlink-cli script flash --file build/app.elf --address 0x08000000 --yes --json
+```
+
 Live memory read script:
 
 ```text
