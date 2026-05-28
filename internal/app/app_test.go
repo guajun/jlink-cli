@@ -233,6 +233,32 @@ func TestFlashProgramAliasJSON(t *testing.T) {
 	}
 }
 
+func TestFlashDirectJSON(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Main([]string{"flash", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
+	if exitCode != ExitOK {
+		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+	}
+
+	var response struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			Script struct {
+				Classification string `json:"classification"`
+				Text           string `json:"text"`
+			} `json:"script"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if !response.OK || response.Result.Script.Classification != "destructive" || !strings.Contains(response.Result.Script.Text, "loadfile build/app.elf") {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+}
+
 func TestMemoryReadAliasJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

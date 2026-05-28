@@ -156,12 +156,18 @@ func runScriptBreakpoint(action string, args []string, jsonOutput *bool) (int, a
 
 func runFlash(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
 	if len(args) == 0 {
-		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "flash requires subcommand: program", Exit: ExitUsage}
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_file", Message: "flash requires --file", Exit: ExitUsage}
+	}
+	if args[0] == "program" {
+		return runScriptFlash(args[1:], jsonOutput)
+	}
+	if strings.HasPrefix(args[0], "-") {
+		return runScriptFlash(args, jsonOutput)
 	}
 	if args[0] != "program" {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown flash subcommand %q", args[0]), Exit: ExitUsage}
 	}
-	return runScriptFlash(args[1:], jsonOutput)
+	return runScriptFlash(args, jsonOutput)
 }
 
 func runMemory(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
