@@ -69,6 +69,12 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runConnect(args[1:], jsonOutput)
 	case "script":
 		return runScript(args[1:], jsonOutput)
+	case "flash":
+		return runFlash(args[1:], jsonOutput)
+	case "memory":
+		return runMemory(args[1:], jsonOutput)
+	case "target":
+		return runTarget(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -122,7 +128,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "connect", "script", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "script", "flash", "memory", "target", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
 }

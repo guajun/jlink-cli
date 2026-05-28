@@ -154,6 +154,40 @@ func runScriptBreakpoint(action string, args []string, jsonOutput *bool) (int, a
 	return finishScript(script, flags)
 }
 
+func runFlash(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
+	if len(args) == 0 {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "flash requires subcommand: program", Exit: ExitUsage}
+	}
+	if args[0] != "program" {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown flash subcommand %q", args[0]), Exit: ExitUsage}
+	}
+	return runScriptFlash(args[1:], jsonOutput)
+}
+
+func runMemory(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
+	if len(args) == 0 {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "memory requires subcommand: read", Exit: ExitUsage}
+	}
+	if args[0] != "read" {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown memory subcommand %q", args[0]), Exit: ExitUsage}
+	}
+	return runScriptMemoryRead(args[1:], jsonOutput)
+}
+
+func runTarget(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
+	if len(args) == 0 {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "target requires subcommand: reset, halt, or run", Exit: ExitUsage}
+	}
+	action := args[0]
+	if action == "run" {
+		action = "go"
+	}
+	if action != "reset" && action != "halt" && action != "go" {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown target subcommand %q", args[0]), Exit: ExitUsage}
+	}
+	return runScriptTargetControl(action, args[1:], jsonOutput)
+}
+
 func addScriptFlags(fs interface {
 	String(string, string, string) *string
 	Bool(string, bool, string) *bool
