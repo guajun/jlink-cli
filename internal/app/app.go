@@ -8,6 +8,7 @@ import (
 	"io"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/guajun/jlink-cli/internal/buildinfo"
 	"github.com/guajun/jlink-cli/internal/jlink"
@@ -62,6 +63,8 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runDoctor(args[1:], jsonOutput)
 	case "inspect":
 		return runInspect(args[1:], jsonOutput)
+	case "connect":
+		return runConnect(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -115,9 +118,60 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
+}
+
+func runConnect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
+	fs := newFlagSet("connect")
+	device := fs.String("device", "", "J-Link device name, for example STM32H750VB")
+	targetInterface := fs.String("interface", "SWD", "target interface, for example SWD or JTAG")
+	speed := fs.String("speed", "4000", "target interface speed in kHz or adaptive")
+	serial := fs.String("serial", "", "optional J-Link serial number")
+	binaryPath := fs.String("jlink-path", "", "path to a SEGGER J-Link command-line executable")
+	timeoutValue := fs.String("timeout", "15s", "maximum time to wait for J-Link Commander")
+	dryRun := fs.Bool("dry-run", false, "print the J-Link command without opening a session")
+	yes := fs.Bool("yes", false, "allow opening an exclusive J-Link session")
+	fs.BoolVar(jsonOutput, "json", true, "write JSON output")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage, nil, nil, usageError(err)
+	}
+	if strings.TrimSpace(*device) == "" {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_device", Message: "connect requires --device, for example --device STM32H750VB", Exit: ExitUsage}
+	}
+	timeout, err := time.ParseDuration(*timeoutValue)
+	if err != nil {
+		return ExitUsage, nil, nil, &cliError{Code: "usage.invalid_timeout", Message: err.Error(), Exit: ExitUsage}
+	}
+
+	report := jlink.Discover(jlink.Options{ExplicitPath: *binaryPath})
+	if report.Selected == "" {
+		return ExitNotReady, report, []protocol.Diagnostic{{Level: "error", Code: "jlink.not_found", Message: "no executable SEGGER J-Link command-line tool was found"}}, &cliError{Code: "jlink.not_found", Message: "install SEGGER J-Link or pass --jlink-path", Exit: ExitNotReady}
+	}
+
+	connectOptions := jlink.ConnectOptions{
+		Executable: report.Selected,
+		Device:     *device,
+		Interface:  *targetInterface,
+		Speed:      *speed,
+		Serial:     *serial,
+		Timeout:    timeout,
+		DryRun:     *dryRun || !*yes,
+	}
+	result, err := jlink.Connect(connectOptions)
+	diagnostics := []protocol.Diagnostic{{Level: "info", Code: "jlink.selected", Message: "selected J-Link command-line executable", Details: map[string]string{"path": report.Selected}}}
+	if connectOptions.DryRun && !*yes {
+		diagnostics = append(diagnostics, protocol.Diagnostic{Level: "warning", Code: "connect.dry_run", Message: "no physical J-Link session was opened; pass --yes to connect"})
+	}
+	if err != nil {
+		status := ExitRuntime
+		if result.TimedOut {
+			status = ExitCancelled
+		}
+		return status, result, diagnostics, &cliError{Code: "jlink.connect_failed", Message: err.Error(), Exit: status}
+	}
+	return ExitOK, result, diagnostics, nil
 }
 
 func runAgent(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
@@ -204,6 +258,7 @@ Commands:
   version   Print build and protocol version information
   doctor    Diagnose local J-Link CLI availability without opening a device session
   inspect   Print command and platform metadata
+	connect   Test a J-Link Commander connection; requires --yes to open a physical session
   run       Parse an agent request; physical J-Link operations are not enabled in the prototype
 
 Global conventions:
