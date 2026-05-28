@@ -71,6 +71,8 @@ jlink-cli run --input '{"action":"ping"}'
 
 `flash program`, `memory read`, and `target halt|run|reset` are direct aliases for the same script execution engine. They return the generated script as JSON by default and execute only when `--yes` is passed.
 
+`flash program --verify` emits `verifybin` only for raw `.bin` images. ELF, HEX, SREC, and MOT files are loaded with `loadfile` without `verifybin`, because J-Link Commander verifies raw binaries differently from structured image formats.
+
 `memory read` has two modes. The default live mode does not issue `h` before reading; it is intended to approximate non-blocking reads for addresses that J-Link can access while the MCU is running. Passing `--halt` emits a halt/read/resume script for the stopped-at-breakpoint case.
 
 `flash program` and `breakpoint` are potentially destructive or exclusive operations. They also default to dry-run behavior and require `--yes` before the target is touched.

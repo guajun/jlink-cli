@@ -2,6 +2,7 @@ package scriptgen
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -80,11 +81,15 @@ func FlashScript(opts FlashOptions) (Script, error) {
 		commands = append(commands, "reset")
 	}
 	commands = append(commands, fmt.Sprintf("loadfile %s, %s", opts.File, formatHex(opts.Address)))
-	if opts.Verify {
+	if opts.Verify && canVerifyBin(opts.File) {
 		commands = append(commands, fmt.Sprintf("verifybin %s, %s", opts.File, formatHex(opts.Address)))
 	}
 	commands = append(commands, "q")
 	return build(Destructive, commands), nil
+}
+
+func canVerifyBin(file string) bool {
+	return strings.EqualFold(filepath.Ext(strings.TrimSpace(file)), ".bin")
 }
 
 func MemoryReadScript(opts MemoryReadOptions) (Script, error) {

@@ -103,10 +103,11 @@ Device STM32H750VB
 SelectInterface SWD
 Speed 4000
 connect
-loadfile firmware.bin, 0x08000000
-verifybin firmware.bin, 0x08000000
+loadfile firmware.elf, 0x08000000
 q
 ```
+
+Use `verifybin` only for raw `.bin` files. Do not generate `verifybin` for `.elf`, `.hex`, `.srec`, or `.mot`; J-Link Commander treats `verifybin` input as a raw binary image.
 
 ## Output Parsing Notes
 
