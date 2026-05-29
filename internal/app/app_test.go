@@ -44,6 +44,75 @@ func TestUnknownCommand(t *testing.T) {
 	}
 }
 
+func TestNestedCommandHelp(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		contains []string
+	}{
+		{
+			name:     "target long help",
+			args:     []string{"target", "--help"},
+			contains: []string{"jlink-cli target <reset|halt|run>", "reset", "halt", "run"},
+		},
+		{
+			name:     "target short help",
+			args:     []string{"target", "-h"},
+			contains: []string{"jlink-cli target <reset|halt|run>", "--device", "--yes"},
+		},
+		{
+			name:     "target action help",
+			args:     []string{"target", "run", "--help"},
+			contains: []string{"jlink-cli target run [flags]", "--interface", "--timeout"},
+		},
+		{
+			name:     "flash help",
+			args:     []string{"flash", "--help"},
+			contains: []string{"jlink-cli flash --file <path>", "jlink-cli flash program --file <path>", "--verify"},
+		},
+		{
+			name:     "flash program help",
+			args:     []string{"flash", "program", "-h"},
+			contains: []string{"jlink-cli script flash --file <path>", "--address", "--reset"},
+		},
+		{
+			name:     "memory help",
+			args:     []string{"memory", "--help"},
+			contains: []string{"jlink-cli memory read --address <addr> --length <n>", "--width"},
+		},
+		{
+			name:     "memory read help",
+			args:     []string{"memory", "read", "--help"},
+			contains: []string{"jlink-cli script memory-read --address <addr> --length <n>", "--halt"},
+		},
+		{
+			name:     "script help",
+			args:     []string{"script", "--help"},
+			contains: []string{"jlink-cli script <subcommand>", "memory-read", "breakpoint-clear"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+
+			exitCode := Main(tt.args, &stdout, &stderr)
+			if exitCode != ExitOK {
+				t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+			}
+			if stderr.Len() != 0 {
+				t.Fatalf("expected empty stderr, got %q", stderr.String())
+			}
+			for _, want := range tt.contains {
+				if !strings.Contains(stdout.String(), want) {
+					t.Fatalf("expected stdout to contain %q, got:\n%s", want, stdout.String())
+				}
+			}
+		})
+	}
+}
+
 func TestRunParsesInputWithoutExclusiveDeviceUse(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

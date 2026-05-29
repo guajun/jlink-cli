@@ -28,20 +28,44 @@ func runScript(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic
 	if len(args) == 0 {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "script requires subcommand: probe, connect, flash, memory-read, reset, halt, go, breakpoint-set, or breakpoint-clear", Exit: ExitUsage}
 	}
+	if isHelpArg(args[0]) {
+		return ExitOK, scriptUsage(), nil, nil
+	}
 	switch args[0] {
 	case "probe":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptProbeUsage(), nil, nil
+		}
 		return runScriptProbe(args[1:], jsonOutput)
 	case "connect":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptConnectUsage(), nil, nil
+		}
 		return runScriptConnect(args[1:], jsonOutput)
 	case "flash":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptFlashUsage(), nil, nil
+		}
 		return runScriptFlash(args[1:], jsonOutput)
 	case "memory-read":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptMemoryReadUsage(), nil, nil
+		}
 		return runScriptMemoryRead(args[1:], jsonOutput)
 	case "reset", "halt", "go":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, targetActionUsage(args[0]), nil, nil
+		}
 		return runScriptTargetControl(args[0], args[1:], jsonOutput)
 	case "breakpoint-set":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptBreakpointUsage("set"), nil, nil
+		}
 		return runScriptBreakpoint("set", args[1:], jsonOutput)
 	case "breakpoint-clear":
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptBreakpointUsage("clear"), nil, nil
+		}
 		return runScriptBreakpoint("clear", args[1:], jsonOutput)
 	default:
 		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown script subcommand %q", args[0]), Exit: ExitUsage}
@@ -158,7 +182,13 @@ func runFlash(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic,
 	if len(args) == 0 {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_file", Message: "flash requires --file", Exit: ExitUsage}
 	}
+	if isHelpArg(args[0]) {
+		return ExitOK, flashUsage(), nil, nil
+	}
 	if args[0] == "program" {
+		if hasHelpArg(args[1:]) {
+			return ExitOK, scriptFlashUsage(), nil, nil
+		}
 		return runScriptFlash(args[1:], jsonOutput)
 	}
 	if strings.HasPrefix(args[0], "-") {
@@ -174,8 +204,14 @@ func runMemory(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic
 	if len(args) == 0 {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "memory requires subcommand: read", Exit: ExitUsage}
 	}
+	if isHelpArg(args[0]) {
+		return ExitOK, memoryUsage(), nil, nil
+	}
 	if args[0] != "read" {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown memory subcommand %q", args[0]), Exit: ExitUsage}
+	}
+	if hasHelpArg(args[1:]) {
+		return ExitOK, scriptMemoryReadUsage(), nil, nil
 	}
 	return runScriptMemoryRead(args[1:], jsonOutput)
 }
@@ -184,6 +220,9 @@ func runTarget(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic
 	if len(args) == 0 {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_subcommand", Message: "target requires subcommand: reset, halt, or run", Exit: ExitUsage}
 	}
+	if isHelpArg(args[0]) {
+		return ExitOK, targetUsage(), nil, nil
+	}
 	action := args[0]
 	if action == "run" {
 		action = "go"
@@ -191,7 +230,139 @@ func runTarget(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic
 	if action != "reset" && action != "halt" && action != "go" {
 		return ExitUsage, nil, nil, &cliError{Code: "usage.unknown_subcommand", Message: fmt.Sprintf("unknown target subcommand %q", args[0]), Exit: ExitUsage}
 	}
+	if hasHelpArg(args[1:]) {
+		return ExitOK, targetActionUsage(args[0]), nil, nil
+	}
 	return runScriptTargetControl(action, args[1:], jsonOutput)
+}
+
+func isHelpArg(arg string) bool {
+	return arg == "help" || arg == "--help" || arg == "-h"
+}
+
+func hasHelpArg(args []string) bool {
+	for _, arg := range args {
+		if isHelpArg(arg) {
+			return true
+		}
+	}
+	return false
+}
+
+func scriptUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli script <subcommand> [flags]\n" +
+		"\n" +
+		"Subcommands:\n" +
+		"  probe             Generate a probe-only J-Link Commander script\n" +
+		"  connect           Generate or execute a target connect script\n" +
+		"  flash             Generate or execute a flash programming script\n" +
+		"  memory-read       Generate or execute a memory read script\n" +
+		"  reset             Generate or execute a target reset script\n" +
+		"  halt              Generate or execute a target halt script\n" +
+		"  go                Generate or execute a target resume script\n" +
+		"  breakpoint-set    Generate or execute a breakpoint set script\n" +
+		"  breakpoint-clear  Generate or execute a breakpoint clear script\n"
+}
+
+func flashUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli flash --file <path> [flags]\n" +
+		"  jlink-cli flash program --file <path> [flags]\n" +
+		"\n" + scriptFlashFlags()
+}
+
+func memoryUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli memory read --address <addr> --length <n> [flags]\n" +
+		"\n" + scriptMemoryReadFlags()
+}
+
+func targetUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli target <reset|halt|run> [flags]\n" +
+		"\n" +
+		"Subcommands:\n" +
+		"  reset  Reset the target\n" +
+		"  halt   Halt the target CPU\n" +
+		"  run    Resume target execution\n" +
+		"  go     Alias for run\n" +
+		"\n" + commonTargetFlags()
+}
+
+func scriptProbeUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli script probe [--json]\n"
+}
+
+func scriptConnectUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli script connect [flags]\n" +
+		"\n" + commonTargetFlags()
+}
+
+func scriptFlashUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli script flash --file <path> [flags]\n" +
+		"\n" + scriptFlashFlags()
+}
+
+func scriptMemoryReadUsage() string {
+	return "Usage:\n" +
+		"  jlink-cli script memory-read --address <addr> --length <n> [flags]\n" +
+		"\n" + scriptMemoryReadFlags()
+}
+
+func targetActionUsage(action string) string {
+	if action == "run" {
+		action = "run"
+	}
+	return "Usage:\n" +
+		fmt.Sprintf("  jlink-cli target %s [flags]\n", action) +
+		"\n" + commonTargetFlags()
+}
+
+func scriptBreakpointUsage(action string) string {
+	return "Usage:\n" +
+		fmt.Sprintf("  jlink-cli script breakpoint-%s --address <addr> [flags]\n", action) +
+		"\n" +
+		"Flags:\n" +
+		"  --address <addr>     Breakpoint address\n" +
+		"  --halt               Halt before changing breakpoint (default true)\n" +
+		"  --run                Resume after breakpoint operation\n" +
+		commonTargetFlagLines()
+}
+
+func scriptFlashFlags() string {
+	return "Flags:\n" +
+		"  --file <path>        Firmware image path\n" +
+		"  --address <addr>     Program address (default 0x08000000)\n" +
+		"  --verify             Verify programmed flash (default true)\n" +
+		"  --reset              Reset before programming\n" +
+		commonTargetFlagLines()
+}
+
+func scriptMemoryReadFlags() string {
+	return "Flags:\n" +
+		"  --address <addr>     Memory address, for example 0x20000000\n" +
+		"  --length <n>         Number of units to read\n" +
+		"  --width <bits>       Access width: 8, 16, or 32 (default 8)\n" +
+		"  --halt               Halt the MCU before reading, then resume\n" +
+		commonTargetFlagLines()
+}
+
+func commonTargetFlags() string {
+	return "Flags:\n" + commonTargetFlagLines()
+}
+
+func commonTargetFlagLines() string {
+	return "  --device <name>      J-Link device name (default STM32H750VB)\n" +
+		"  --interface <name>   Target interface (default SWD)\n" +
+		"  --speed <value>      Target interface speed in kHz (default 4000)\n" +
+		"  --jlink-path <path>  Path to SEGGER J-Link executable\n" +
+		"  --timeout <duration> Maximum execution time (default 60s)\n" +
+		"  --yes               Execute the generated script\n" +
+		"  --json              Write JSON output\n"
 }
 
 func addScriptFlags(fs interface {

@@ -297,8 +297,8 @@ func writeHuman(stdout io.Writer, stderr io.Writer, command string, result any, 
 		fmt.Fprintf(stderr, "error: %s\n", err.Error())
 		return
 	}
-	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Fprint(stdout, result)
+	if text, ok := result.(string); ok {
+		fmt.Fprint(stdout, text)
 		return
 	}
 	writeJSON(stdout, protocol.Success(result, nil))
