@@ -36,6 +36,13 @@ archives:
       - README.md
       - examples/*
 
+release:
+  extra_files:
+    - glob: ./install/install.ps1
+      name_template: install.ps1
+    - glob: ./install/install.sh
+      name_template: install.sh
+
 checksum:
   name_template: checksums.txt
 

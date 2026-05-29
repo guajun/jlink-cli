@@ -23,16 +23,16 @@ go install github.com/guajun/jlink-cli/cmd/jlink-cli@latest
 Windows PowerShell:
 
 ```powershell
-irm https://guajun.github.io/jlink-cli/install.ps1 | iex
+irm https://github.com/guajun/jlink-cli/releases/latest/download/install.ps1 | iex
 ```
 
 Linux shell:
 
 ```sh
-curl -fsSL https://guajun.github.io/jlink-cli/install.sh | sh
+curl -fsSL https://github.com/guajun/jlink-cli/releases/latest/download/install.sh | sh
 ```
 
-These installers download the latest binary archive from the [GitHub Releases](https://github.com/guajun/jlink-cli/releases/latest) page.
+These installer scripts are published as GitHub Release assets and download the latest binary archive from the [GitHub Releases](https://github.com/guajun/jlink-cli/releases/latest) page.
 
 For local development:
 
