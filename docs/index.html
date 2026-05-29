@@ -30,13 +30,24 @@
           <a class="button secondary" href="https://github.com/guajun/jlink-cli/releases/latest">Latest release</a>
         </div>
       </div>
-      <div class="terminal" aria-label="Example command output">
+      <div class="terminal" aria-label="Agent-safe flash script preview">
         <div class="terminal-bar"><span></span><span></span><span></span></div>
-        <pre><code>$ jlink-cli doctor --json
+        <pre><code>$ jlink-cli flash --device STM32H750VB --file build/app.bin --address 0x08000000 --verify --json
 {
   "ok": true,
   "result": {
-    "selected": "JLinkExe"
+    "dryRun": true,
+    "requiresConfirmation": true,
+    "command": "JLink.exe -NoGui 1 -CommanderScript flash.jlink",
+    "script": [
+      "device STM32H750VB",
+      "si SWD",
+      "speed 4000",
+      "loadbin build/app.bin, 0x08000000",
+      "verifybin build/app.bin, 0x08000000",
+      "r",
+      "q"
+    ]
   }
 }</code></pre>
       </div>

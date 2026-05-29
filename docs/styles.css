@@ -233,7 +233,8 @@ h3 {
   color: #d1fae5;
   font-size: 15px;
   line-height: 1.65;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .band {
