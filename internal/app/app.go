@@ -75,6 +75,8 @@ func run(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, erro
 		return runMemory(args[1:], jsonOutput)
 	case "target":
 		return runTarget(args[1:], jsonOutput)
+	case "skill":
+		return runSkill(args[1:], jsonOutput)
 	case "run":
 		return runAgent(args[1:], jsonOutput)
 	case "help", "--help", "-h":
@@ -128,7 +130,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 	}
 	return ExitOK, map[string]any{
 		"build":    buildinfo.Current(),
-		"commands": []string{"version", "doctor", "inspect", "connect", "script", "flash", "memory", "target", "run"},
+		"commands": []string{"version", "doctor", "inspect", "connect", "script", "flash", "memory", "target", "skill", "run"},
 		"platform": map[string]string{"goos": runtime.GOOS, "goarch": runtime.GOARCH},
 	}, nil, nil
 }
@@ -323,6 +325,7 @@ func usage() string {
 		"  flash     Generate or execute a flash load script; requires --yes to execute\n" +
 		"  memory    Generate or execute a memory read script; requires --yes to execute\n" +
 		"  target    Generate or execute target halt/run/reset scripts; requires --yes to execute\n" +
+		"  skill     Install the J-Link Commander agent skill locally\n" +
 		"  run       Parse or execute a supported agent request\n" +
 		"\n" +
 		"Global conventions:\n" +

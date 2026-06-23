@@ -60,6 +60,10 @@ jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --wi
 jlink-cli target halt --device STM32H750VB
 jlink-cli target run --device STM32H750VB
 jlink-cli target reset --device STM32H750VB
+jlink-cli skill install --json
+jlink-cli skill install --skill jlink-commander --json
+jlink-cli skill install --agent claude-code --json
+jlink-cli skill install --agent codex --json
 jlink-cli run --input '{"action":"ping"}'
 ```
 
@@ -78,6 +82,25 @@ jlink-cli run --input '{"action":"ping"}'
 `flash program` and `breakpoint` are potentially destructive or exclusive operations. They also default to dry-run behavior and require `--yes` before the target is touched.
 
 `callstack` prepares a GDB Server plus `arm-none-eabi-gdb` backtrace command for the case where the MCU is already halted at a breakpoint. In this version it returns the command plan as JSON rather than starting the long-running server itself.
+
+`skill install` installs bundled Agent Skills into local agent host directories. The default skill is `jlink-cli`, which teaches agents how to use this CLI. The separate `jlink-commander` skill is for direct SEGGER J-Link Commander / `JLinkExe` workflows. Use `--skill jlink-commander` to install only the Commander skill, or `--skill all` to install both. Existing installs are updated in place.
+
+Supported local agent targets:
+
+| Agent | `--agent` values | Default install path |
+| --- | --- | --- |
+| GitHub Copilot | `github-copilot`, `copilot` | `~/.copilot/skills/<skill-name>/SKILL.md` |
+| Claude Code | `claude-code`, `claude` | `~/.claude/skills/<skill-name>/SKILL.md` |
+| Codex | `codex` | `~/.codex/skills/<skill-name>/SKILL.md` |
+| Custom path | `--dir <path>` | `<path>/<skill-name>/SKILL.md` |
+
+The default `--agent all` installs to GitHub Copilot, Claude Code, and Codex. For broader agent-host support, version pinning, provenance metadata, and updates, use GitHub CLI's Agent Skills installer:
+
+```powershell
+gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user
+gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user
+gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user
+```
 
 ## Design Notes
 
