@@ -7,18 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type ScriptOptions struct {
 	Executable string
 	Script     []string
+	Serial     string
 	Timeout    time.Duration
 	DryRun     bool
 }
 
 func RunScript(opts ScriptOptions) (ConnectResult, error) {
-	spec := CommandSpec{Executable: opts.Executable, Args: []string{"-NoGui", "1", "-CommanderScript", "<temp-script>"}, Script: opts.Script}
+	spec := CommandSpec{Executable: opts.Executable, Args: buildScriptArgs(opts.Serial, "<temp-script>"), Script: opts.Script}
 	if opts.DryRun {
 		return ConnectResult{DryRun: true, Command: spec}, nil
 	}
@@ -35,7 +37,7 @@ func RunScript(opts ScriptOptions) (ConnectResult, error) {
 	if err := os.WriteFile(scriptPath, []byte(joinScript(opts.Script)), 0600); err != nil {
 		return ConnectResult{Command: spec}, err
 	}
-	spec.Args = []string{"-NoGui", "1", "-CommanderScript", scriptPath}
+	spec.Args = buildScriptArgs(opts.Serial, scriptPath)
 
 	ctx := context.Background()
 	cancel := func() {}
@@ -66,6 +68,14 @@ func RunScript(opts ScriptOptions) (ConnectResult, error) {
 	}
 	result.ExitCode = 0
 	return result, nil
+}
+
+func buildScriptArgs(serial string, scriptPath string) []string {
+	args := []string{"-NoGui", "1"}
+	if strings.TrimSpace(serial) != "" {
+		args = append(args, "-SelectEmuBySN", serial)
+	}
+	return append(args, "-CommanderScript", scriptPath)
 }
 
 func joinScript(commands []string) string {

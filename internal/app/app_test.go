@@ -85,7 +85,7 @@ func TestNestedCommandHelp(t *testing.T) {
 		{
 			name:     "memory read help",
 			args:     []string{"memory", "read", "--help"},
-			contains: []string{"jlink-cli script memory-read --address <addr> --length <n>", "--halt"},
+			contains: []string{"jlink-cli script memory-read --address <addr> --length <n>", "--halt", "--serial"},
 		},
 		{
 			name:     "script help",
@@ -149,6 +149,9 @@ func TestSkillInstallDefaultsToKnownUserDirs(t *testing.T) {
 		}
 		if !strings.Contains(string(content), "name: jlink-cli") {
 			t.Fatalf("unexpected installed content at %s: %s", expectedFile, content)
+		}
+		if strings.Count(string(content), "name: jlink-cli") != 1 || !strings.Contains(string(content), "--serial") {
+			t.Fatalf("expected one serial-aware jlink-cli skill at %s", expectedFile)
 		}
 	}
 
@@ -229,6 +232,9 @@ func TestSkillInstallAgentAndCustomDir(t *testing.T) {
 	}
 	if !strings.Contains(string(content), "name: jlink-commander") {
 		t.Fatalf("unexpected commander custom dir content: %s", content)
+	}
+	if strings.Count(string(content), "name: jlink-commander") != 1 || !strings.Contains(string(content), "-SelectEmuBySN") {
+		t.Fatalf("expected one serial-aware jlink-commander skill: %s", content)
 	}
 }
 
@@ -315,6 +321,41 @@ func TestScriptMemoryReadRequiresConfirmation(t *testing.T) {
 	}
 	if !strings.Contains(response.Result.Script.Text, "mem8 0x20000000, 0x10") {
 		t.Fatalf("expected mem8 command: %s", response.Result.Script.Text)
+	}
+}
+
+func TestTargetCommandsAcceptSerial(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "memory read",
+			args: []string{"memory", "read", "--address", "0x20000000", "--length", "16", "--serial", "123456789", "--json"},
+		},
+		{
+			name: "breakpoint set",
+			args: []string{"script", "breakpoint-set", "--address", "0x08000100", "--serial", "123456789", "--json"},
+		},
+		{
+			name: "breakpoint clear",
+			args: []string{"script", "breakpoint-clear", "--address", "0x08000100", "--serial", "123456789", "--json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+
+			exitCode := Main(tt.args, &stdout, &stderr)
+			if exitCode != ExitOK {
+				t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+			}
+			if !strings.Contains(stdout.String(), `"ok": true`) {
+				t.Fatalf("unexpected response: %s", stdout.String())
+			}
+		})
 	}
 }
 
