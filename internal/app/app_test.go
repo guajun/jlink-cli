@@ -21,11 +21,16 @@ func TestVersionJSON(t *testing.T) {
 		t.Fatalf("expected empty stderr, got %q", stderr.String())
 	}
 
-	var response map[string]any
+	var response struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			Version string `json:"version"`
+		} `json:"result"`
+	}
 	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
 		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
 	}
-	if response["ok"] != true {
+	if !response.OK || response.Result.Version != "0.2.0-dev" {
 		t.Fatalf("expected ok response, got %#v", response)
 	}
 }
