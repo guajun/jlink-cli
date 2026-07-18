@@ -19,6 +19,7 @@ type scriptFlags struct {
 	device       *string
 	interfaceRef *string
 	speed        *string
+	serial       *string
 	jlinkPath    *string
 	timeout      *string
 	yes          *bool
@@ -359,6 +360,7 @@ func commonTargetFlagLines() string {
 	return "  --device <name>      J-Link device name (default STM32H750VB)\n" +
 		"  --interface <name>   Target interface (default SWD)\n" +
 		"  --speed <value>      Target interface speed in kHz (default 4000)\n" +
+		"  --serial <number>    Select a J-Link probe by serial number\n" +
 		"  --jlink-path <path>  Path to SEGGER J-Link executable\n" +
 		"  --timeout <duration> Maximum execution time (default 60s)\n" +
 		"  --yes               Execute the generated script\n" +
@@ -373,6 +375,7 @@ func addScriptFlags(fs interface {
 		device:       fs.String("device", "STM32H750VB", "J-Link device name"),
 		interfaceRef: fs.String("interface", "SWD", "target interface"),
 		speed:        fs.String("speed", "4000", "target interface speed in kHz"),
+		serial:       fs.String("serial", "", "optional J-Link serial number"),
 		jlinkPath:    fs.String("jlink-path", "", "path to SEGGER J-Link executable"),
 		timeout:      fs.String("timeout", "60s", "maximum execution time"),
 		yes:          fs.Bool("yes", false, "execute the generated script"),
@@ -397,7 +400,7 @@ func finishScript(script scriptgen.Script, flags scriptFlags) (int, any, []proto
 	if err != nil {
 		return ExitUsage, result, diagnostics, &cliError{Code: "usage.invalid_timeout", Message: err.Error(), Exit: ExitUsage}
 	}
-	execution, err := jlink.RunScript(jlink.ScriptOptions{Executable: executable, Script: script.Commands, Timeout: timeout})
+	execution, err := jlink.RunScript(jlink.ScriptOptions{Executable: executable, Script: script.Commands, Serial: *flags.serial, Timeout: timeout})
 	result.Execution = &execution
 	if err != nil {
 		status := ExitRuntime

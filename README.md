@@ -48,14 +48,14 @@ go run ./cmd/jlink-cli doctor --json
 jlink-cli version --json
 jlink-cli doctor --json
 jlink-cli inspect --json
-jlink-cli connect --device STM32H750VB --interface SWD --speed 4000 --dry-run
+jlink-cli connect --device STM32H750VB --interface SWD --speed 4000 --serial 123456789 --dry-run
 jlink-cli script probe --json
 jlink-cli script connect --json
 jlink-cli script flash --file build/app.elf --address 0x08000000 --json
-jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --json
-jlink-cli script breakpoint-set --address 0x08000100 --json
+jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --serial 123456789 --json
+jlink-cli script breakpoint-set --address 0x08000100 --serial 123456789 --json
 jlink-cli flash --device STM32H750VB --file firmware.bin --address 0x08000000 --verify
-jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8
+jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --serial 123456789
 jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --halt
 jlink-cli target halt --device STM32H750VB
 jlink-cli target run --device STM32H750VB
@@ -74,6 +74,8 @@ jlink-cli run --input '{"action":"ping"}'
 `script` generates J-Link CommanderScript text without executing it by default. `script probe` is probe-only, while target scripts such as `script connect`, `script flash`, `script memory-read`, and `script breakpoint-set` are marked as requiring confirmation. Passing `--yes` executes the generated script through `JLink.exe -NoGui 1 -CommanderScript <temp-script>`.
 
 `flash`, `memory read`, and `target halt|run|reset` are direct aliases for the same script execution engine. They return the generated script as JSON by default and execute only when `--yes` is passed. `flash program` is kept as a compatibility spelling, but `flash --file ...` is the preferred form.
+
+All target-session commands accept `--serial <number>` to select one probe in a multi-J-Link setup. This includes `connect`, target `script` commands, `flash`, `memory read`, and `target halt|run|reset`. On execution, the CLI passes the selection to J-Link Commander as `-SelectEmuBySN <number>`; the generated CommanderScript remains unchanged.
 
 `flash --verify` emits `verifybin` only for raw `.bin` images. ELF, HEX, SREC, and MOT files are loaded with `loadfile` without `verifybin`, because J-Link Commander verifies raw binaries differently from structured image formats.
 
