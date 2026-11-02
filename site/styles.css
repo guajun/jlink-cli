@@ -406,3 +406,5 @@ footer span {
 
 .install-card h3 { padding-right: 66px; }
 @media (max-width: 460px) { .install-card h3 { padding-right: 0; } }
+
+.language-toggle { border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; color: var(--accent-dark); background: var(--panel); font: inherit; cursor: pointer; }

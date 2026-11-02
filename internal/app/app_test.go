@@ -28,7 +28,7 @@ func TestVersionJSON(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
 		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
 	}
-	if !response.OK || response.Result.Version != "0.2.0-dev" {
+	if !response.OK || response.Result.Version != "0.3.0-dev" {
 		t.Fatalf("expected ok response, got %#v", response)
 	}
 }
