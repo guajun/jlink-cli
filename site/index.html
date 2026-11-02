@@ -80,12 +80,14 @@
         <p class="eyebrow">Optional agent setup</p>
         <h2>2. Install Agent Skills with gh</h2>
         <p>Use a GitHub CLI version with <code>gh skill install</code> support. This installs skill files only. Install the CLI binary separately using step 1.</p>
-        <p>The <code>jlink-cli</code> skill teaches your agent to use the CLI. For direct SEGGER J-Link Commander workflows, replace the skill name after the repository with <code>jlink-commander</code>. SEGGER J-Link software is also a separate prerequisite.</p>
       </div>
       <div class="install-grid">
-        <article class="install-card"><h3>Codex</h3><p>Install the jlink-cli skill for Codex.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user" type="button" aria-label="Copy Codex skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user</code></pre></article>
-        <article class="install-card"><h3>Claude Code</h3><p>Install the jlink-cli skill for Claude Code.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user" type="button" aria-label="Copy Claude Code skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user</code></pre></article>
-        <article class="install-card"><h3>GitHub Copilot</h3><p>Install the jlink-cli skill for GitHub Copilot.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user" type="button" aria-label="Copy GitHub Copilot skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user</code></pre></article>
+        <article class="install-card">
+          <h3>Agent Skills</h3>
+          <p>Install skills with GitHub CLI.</p>
+          <button class="copy-button" data-copy="gh skill install guajun/jlink-cli" type="button" aria-label="Copy skill install command">Copy</button>
+          <pre><code>gh skill install guajun/jlink-cli</code></pre>
+        </article>
       </div>
     </section>
 
