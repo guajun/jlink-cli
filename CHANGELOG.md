@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Remove the built-in `skill install` command and embedded skills; use `gh skill install` instead.
+- Add English/Chinese language switching with a remembered preference on the website.
+- Document separate CLI and skill installation in help, the website, README, and installer output.
+
 All notable changes to this project will be documented in this file.
 
 ## 0.2.0

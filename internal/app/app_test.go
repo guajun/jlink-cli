@@ -3,8 +3,6 @@ package app
 import (
 	"bytes"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -30,7 +28,7 @@ func TestVersionJSON(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
 		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
 	}
-	if !response.OK || response.Result.Version != "0.2.0-dev" {
+	if !response.OK || response.Result.Version != "0.3.0-dev" {
 		t.Fatalf("expected ok response, got %#v", response)
 	}
 }
@@ -97,16 +95,6 @@ func TestNestedCommandHelp(t *testing.T) {
 			args:     []string{"script", "--help"},
 			contains: []string{"jlink-cli script <subcommand>", "memory-read", "breakpoint-clear"},
 		},
-		{
-			name:     "skill help",
-			args:     []string{"skill", "--help"},
-			contains: []string{"jlink-cli skill install", "bundled jlink-cli skills"},
-		},
-		{
-			name:     "skill install help",
-			args:     []string{"skill", "install", "--help"},
-			contains: []string{"jlink-cli skill install [flags]", "--skill", "--agent", "--dir"},
-		},
 	}
 
 	for _, tt := range tests {
@@ -130,116 +118,41 @@ func TestNestedCommandHelp(t *testing.T) {
 	}
 }
 
-func TestSkillInstallDefaultsToKnownUserDirs(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	exitCode := Main([]string{"skill", "install", "--json"}, &stdout, &stderr)
-	if exitCode != ExitOK {
-		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
+func TestSeparateSkillInstallation(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Main([]string{"--help"}, &stdout, &stderr); code != ExitOK {
+		t.Fatalf("help failed: %s", &stderr)
 	}
-
-	expectedFiles := []string{
-		filepath.Join(home, ".copilot", "skills", "jlink-cli", "SKILL.md"),
-		filepath.Join(home, ".claude", "skills", "jlink-cli", "SKILL.md"),
-		filepath.Join(home, ".codex", "skills", "jlink-cli", "SKILL.md"),
-	}
-	for _, expectedFile := range expectedFiles {
-		content, err := os.ReadFile(expectedFile)
-		if err != nil {
-			t.Fatalf("expected installed skill at %s: %v", expectedFile, err)
-		}
-		if !strings.Contains(string(content), "name: jlink-cli") {
-			t.Fatalf("unexpected installed content at %s: %s", expectedFile, content)
-		}
-		if strings.Count(string(content), "name: jlink-cli") != 1 || !strings.Contains(string(content), "--serial") {
-			t.Fatalf("expected one serial-aware jlink-cli skill at %s", expectedFile)
+	for _, want := range []string{"installed separately", "gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user", "jlink-commander"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("missing %q in help: %s", want, &stdout)
 		}
 	}
-
+	stdout.Reset()
+	stderr.Reset()
+	if code := Main([]string{"skill", "install"}, &stdout, &stderr); code != ExitUsage {
+		t.Fatalf("removed command returned %d", code)
+	}
+	if !strings.Contains(stderr.String(), "unknown command") {
+		t.Fatalf("unexpected error: %s", &stderr)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := Main([]string{"inspect", "--json"}, &stdout, &stderr); code != ExitOK {
+		t.Fatal(&stderr)
+	}
 	var response struct {
-		OK     bool `json:"ok"`
-		Result []struct {
-			Name    string `json:"name"`
-			Targets []struct {
-				Agent string `json:"agent"`
-			} `json:"targets"`
+		Result struct {
+			Commands []string `json:"commands"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
-		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+		t.Fatal(err)
 	}
-	if !response.OK || len(response.Result) != 1 || response.Result[0].Name != "jlink-cli" || len(response.Result[0].Targets) != 3 {
-		t.Fatalf("unexpected response: %#v", response)
-	}
-}
-
-func TestSkillInstallAgentAndCustomDir(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	exitCode := Main([]string{"skill", "install", "--agent", "copilot", "--json"}, &stdout, &stderr)
-	if exitCode != ExitOK {
-		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
-	}
-	if _, err := os.Stat(filepath.Join(home, ".copilot", "skills", "jlink-cli", "SKILL.md")); err != nil {
-		t.Fatalf("expected copilot install: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "jlink-cli", "SKILL.md")); !os.IsNotExist(err) {
-		t.Fatalf("expected claude install to be skipped, got %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".codex", "skills", "jlink-cli", "SKILL.md")); !os.IsNotExist(err) {
-		t.Fatalf("expected codex install to be skipped, got %v", err)
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	exitCode = Main([]string{"skill", "install", "--agent", "codex", "--json"}, &stdout, &stderr)
-	if exitCode != ExitOK {
-		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
-	}
-	if _, err := os.Stat(filepath.Join(home, ".codex", "skills", "jlink-cli", "SKILL.md")); err != nil {
-		t.Fatalf("expected codex install: %v", err)
-	}
-
-	targetDir := t.TempDir()
-
-	stdout.Reset()
-	stderr.Reset()
-	exitCode = Main([]string{"skill", "install", "--dir", targetDir, "--json"}, &stdout, &stderr)
-	if exitCode != ExitOK {
-		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
-	}
-
-	content, err := os.ReadFile(filepath.Join(targetDir, "jlink-cli", "SKILL.md"))
-	if err != nil {
-		t.Fatalf("expected custom dir install: %v", err)
-	}
-	if !strings.Contains(string(content), "name: jlink-cli") {
-		t.Fatalf("unexpected custom dir content: %s", content)
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	exitCode = Main([]string{"skill", "install", "--skill", "jlink-commander", "--dir", targetDir, "--json"}, &stdout, &stderr)
-	if exitCode != ExitOK {
-		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
-	}
-	content, err = os.ReadFile(filepath.Join(targetDir, "jlink-commander", "SKILL.md"))
-	if err != nil {
-		t.Fatalf("expected commander custom dir install: %v", err)
-	}
-	if !strings.Contains(string(content), "name: jlink-commander") {
-		t.Fatalf("unexpected commander custom dir content: %s", content)
-	}
-	if strings.Count(string(content), "name: jlink-commander") != 1 || !strings.Contains(string(content), "-SelectEmuBySN") {
-		t.Fatalf("expected one serial-aware jlink-commander skill: %s", content)
+	for _, command := range response.Result.Commands {
+		if command == "skill" {
+			t.Fatal("inspect still advertises skill")
+		}
 	}
 }
 

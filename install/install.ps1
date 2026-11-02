@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
+Write-Host 'The one-line installer installs only the CLI binary; skills are not included.'
+Write-Host 'Install skills separately with GitHub CLI: gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user'
+Write-Host 'Replace codex with claude-code or github-copilot for your agent.'
+
 $Repo = if ($env:JLINK_CLI_REPO) { $env:JLINK_CLI_REPO } else { 'guajun/jlink-cli' }
 $InstallDir = if ($env:JLINK_CLI_INSTALL_DIR) { $env:JLINK_CLI_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'Programs\jlink-cli\bin' }
 

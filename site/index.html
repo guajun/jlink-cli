@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="jlink-cli is a Go-first command-line interface for AI agents working with SEGGER J-Link tooling.">
   <title>jlink-cli</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=0.3.0">
 </head>
 <body>
   <header class="site-header">
@@ -14,20 +14,21 @@
       <span>jlink-cli</span>
     </a>
     <nav aria-label="Primary">
-      <a href="https://github.com/guajun/jlink-cli/releases/latest">Release</a>
+      <a href="https://github.com/guajun/jlink-cli/releases/latest" data-i18n data-zh="发布版本">Release</a>
       <a href="https://github.com/guajun/jlink-cli">GitHub</a>
+      <button id="language-toggle" class="language-toggle" type="button" aria-label="切换为中文">中文</button>
     </nav>
   </header>
 
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Binary-distributed J-Link tooling for agents</p>
+        <p class="eyebrow" data-i18n data-zh="面向 AI Agent 的 J-Link 命令行工具">Binary-distributed J-Link tooling for agents</p>
         <h1>jlink-cli</h1>
-        <p class="lede">A Go-first command-line interface that gives AI agents predictable, non-interactive access to SEGGER J-Link discovery, diagnostics, and scripted connection workflows.</p>
+        <p class="lede" data-i18n data-zh="基于 Go 的命令行工具，为 AI Agent 提供可预测、无需交互的 SEGGER J-Link 工具发现、诊断与脚本连接流程。">A Go-first command-line interface that gives AI agents predictable, non-interactive access to SEGGER J-Link discovery, diagnostics, and scripted connection workflows.</p>
         <div class="hero-actions">
-          <a class="button primary" href="#install">Install</a>
-          <a class="button secondary" href="https://github.com/guajun/jlink-cli/releases/latest">Latest release</a>
+          <a class="button primary" href="#install" data-i18n data-zh="安装">Install</a>
+          <a class="button secondary" href="https://github.com/guajun/jlink-cli/releases/latest" data-i18n data-zh="最新版本">Latest release</a>
         </div>
       </div>
       <div class="terminal" aria-label="Agent-safe flash script preview">
@@ -55,37 +56,54 @@
 
     <section id="install" class="band">
       <div class="section-heading">
-        <p class="eyebrow">Install from GitHub Releases</p>
-        <h2>One-line installers</h2>
+        <p class="eyebrow" data-i18n data-zh="从 GitHub Releases 安装">Install from GitHub Releases</p>
+        <h2 data-i18n data-zh="1. 安装 CLI 二进制">1. Install the CLI binary</h2>
+        <p data-i18n data-zh="CLI 二进制与 Agent Skills 各自安装。以下一行安装命令只安装二进制，不包含 Skill。可通过下方的 <code>gh skill install</code> 单独安装 Skill；安装 Skill 也不会安装二进制。">The CLI binary and Agent Skills are installed separately. These one-line installers install only the binary and do not include skills. Install optional skills with <code>gh skill install</code> below; skills do not install the binary.</p>
       </div>
       <div class="install-grid">
         <article class="install-card">
           <h3>Windows PowerShell</h3>
-          <p>Downloads the latest Windows release asset and installs <code>jlink-cli.exe</code> into <code>%LOCALAPPDATA%\Programs\jlink-cli\bin</code>.</p>
+          <p data-i18n data-zh="下载最新 Windows 发布文件，将 <code>jlink-cli.exe</code> 安装到 <code>%LOCALAPPDATA%\Programs\jlink-cli\bin</code>。">Downloads the latest Windows release asset and installs <code>jlink-cli.exe</code> into <code>%LOCALAPPDATA%\Programs\jlink-cli\bin</code>.</p>
           <button class="copy-button" data-copy="irm https://github.com/guajun/jlink-cli/releases/latest/download/install.ps1 | iex" type="button" aria-label="Copy Windows install command">Copy</button>
           <pre><code>irm https://github.com/guajun/jlink-cli/releases/latest/download/install.ps1 | iex</code></pre>
         </article>
         <article class="install-card">
           <h3>Linux shell</h3>
-          <p>Downloads the latest Linux release asset and installs <code>jlink-cli</code> into <code>~/.local/bin</code>.</p>
+          <p data-i18n data-zh="下载最新 Linux 发布文件，将 <code>jlink-cli</code> 安装到 <code>~/.local/bin</code>。">Downloads the latest Linux release asset and installs <code>jlink-cli</code> into <code>~/.local/bin</code>.</p>
           <button class="copy-button" data-copy="curl -fsSL https://github.com/guajun/jlink-cli/releases/latest/download/install.sh | sh" type="button" aria-label="Copy Linux install command">Copy</button>
           <pre><code>curl -fsSL https://github.com/guajun/jlink-cli/releases/latest/download/install.sh | sh</code></pre>
         </article>
       </div>
     </section>
 
+    <section id="skills" class="band">
+      <div class="section-heading">
+        <p class="eyebrow" data-i18n data-zh="可选的 Agent 配置">Optional agent setup</p>
+        <h2 data-i18n data-zh="2. 使用 gh 安装 Agent Skills">2. Install Agent Skills with gh</h2>
+        <p data-i18n data-zh="请使用支持 <code>gh skill install</code> 的 GitHub CLI 版本。此操作仅安装技能文件；CLI 二进制需按第 1 步单独安装。">Use a GitHub CLI version with <code>gh skill install</code> support. This installs skill files only. Install the CLI binary separately using step 1.</p>
+      </div>
+      <div class="install-grid">
+        <article class="install-card">
+          <h3>Agent Skills</h3>
+          <p data-i18n data-zh="通过 GitHub CLI 安装技能。">Install skills with GitHub CLI.</p>
+          <button class="copy-button" data-copy="gh skill install guajun/jlink-cli" type="button" aria-label="Copy skill install command">Copy</button>
+          <pre><code>gh skill install guajun/jlink-cli</code></pre>
+        </article>
+      </div>
+    </section>
+
     <section class="content-grid">
       <article>
-        <h2>Agent-first defaults</h2>
-        <p>Commands are designed for stable JSON output, stderr diagnostics, and non-interactive execution so automation can inspect local J-Link readiness safely.</p>
+        <h2 data-i18n data-zh="面向 Agent 的默认行为">Agent-first defaults</h2>
+        <p data-i18n data-zh="命令提供稳定的 JSON 输出、stderr 诊断与非交互执行方式，便于自动化流程安全地检查本地 J-Link 环境。">Commands are designed for stable JSON output, stderr diagnostics, and non-interactive execution so automation can inspect local J-Link readiness safely.</p>
       </article>
       <article>
-        <h2>Release assets</h2>
-        <p>GoReleaser publishes single-file binaries for Windows, Linux, and macOS on every tagged release.</p>
+        <h2 data-i18n data-zh="发布文件">Release assets</h2>
+        <p data-i18n data-zh="每次标签发布都会通过 GoReleaser 生成 Windows、Linux 和 macOS 的单文件二进制。">GoReleaser publishes single-file binaries for Windows, Linux, and macOS on every tagged release.</p>
       </article>
       <article>
-        <h2>Physical sessions stay explicit</h2>
-        <p>Connection workflows default to dry-run behavior unless callers opt in with <code>--yes</code>.</p>
+        <h2 data-i18n data-zh="显式开启设备会话">Physical sessions stay explicit</h2>
+        <p data-i18n data-zh="连接流程默认仅预览，只有显式传入 <code>--yes</code> 才会执行。">Connection workflows default to dry-run behavior unless callers opt in with <code>--yes</code>.</p>
       </article>
     </section>
   </main>
@@ -93,9 +111,9 @@
   <footer>
     <span>jlink-cli</span>
     <a href="https://github.com/guajun/jlink-cli/blob/main/README.md">README</a>
-    <a href="https://github.com/guajun/jlink-cli/releases/latest">Releases</a>
+    <a href="https://github.com/guajun/jlink-cli/releases/latest" data-i18n data-zh="发布版本">Releases</a>
   </footer>
 
-  <script src="./site.js"></script>
+  <script src="./site.js?v=0.3.0"></script>
 </body>
 </html>
