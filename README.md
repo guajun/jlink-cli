@@ -60,10 +60,6 @@ jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --wi
 jlink-cli target halt --device STM32H750VB
 jlink-cli target run --device STM32H750VB
 jlink-cli target reset --device STM32H750VB
-jlink-cli skill install --json
-jlink-cli skill install --skill jlink-commander --json
-jlink-cli skill install --agent claude-code --json
-jlink-cli skill install --agent codex --json
 jlink-cli run --input '{"action":"ping"}'
 ```
 
@@ -85,18 +81,11 @@ All target-session commands accept `--serial <number>` to select one probe in a 
 
 `callstack` prepares a GDB Server plus `arm-none-eabi-gdb` backtrace command for the case where the MCU is already halted at a breakpoint. In this version it returns the command plan as JSON rather than starting the long-running server itself.
 
-`skill install` installs bundled Agent Skills into local agent host directories. The default skill is `jlink-cli`, which teaches agents how to use this CLI. The separate `jlink-commander` skill is for direct SEGGER J-Link Commander / `JLinkExe` workflows. Use `--skill jlink-commander` to install only the Commander skill, or `--skill all` to install both. Existing installs are updated in place.
+## Agent skills (install separately)
 
-Supported local agent targets:
+The CLI binary and Agent Skills are installed separately. The one-line installers above install only the CLI binary and do not include skills. `gh skill install` installs skill files only and does not install the CLI binary. Use a GitHub CLI version with `gh skill install` support.
 
-| Agent | `--agent` values | Default install path |
-| --- | --- | --- |
-| GitHub Copilot | `github-copilot`, `copilot` | `~/.copilot/skills/<skill-name>/SKILL.md` |
-| Claude Code | `claude-code`, `claude` | `~/.claude/skills/<skill-name>/SKILL.md` |
-| Codex | `codex` | `~/.codex/skills/<skill-name>/SKILL.md` |
-| Custom path | `--dir <path>` | `<path>/<skill-name>/SKILL.md` |
-
-The default `--agent all` installs to GitHub Copilot, Claude Code, and Codex. For broader agent-host support, version pinning, provenance metadata, and updates, use GitHub CLI's Agent Skills installer:
+The built-in `jlink-cli skill install` command has been removed. Use GitHub CLI instead:
 
 ```powershell
 gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user
@@ -107,3 +96,5 @@ gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user
 ## Design Notes
 
 This project is modeled after the useful architecture patterns in `square/pylink`: command separation, structured errors, platform-aware J-Link discovery, installation troubleshooting, and broad test coverage. The implementation is Go-first because single-binary distribution is a better fit for CLI tools used by agents.
+
+The `jlink-cli` skill teaches agents to use this CLI. For direct SEGGER J-Link Commander workflows, replace the skill name with `jlink-commander` in the commands above. SEGGER J-Link software must also be installed separately.

@@ -1,6 +1,11 @@
 #!/usr/bin/env sh
 set -eu
 
+printf '%s\n' \
+  "The one-line installer installs only the CLI binary; skills are not included." \
+  "Install skills separately with GitHub CLI: gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user" \
+  "Replace codex with claude-code or github-copilot for your agent."
+
 repo="${JLINK_CLI_REPO:-guajun/jlink-cli}"
 install_dir="${JLINK_CLI_INSTALL_DIR:-$HOME/.local/bin}"
 api_url="https://api.github.com/repos/$repo/releases/latest"

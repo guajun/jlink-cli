@@ -403,3 +403,6 @@ footer span {
     padding-right: 0;
   }
 }
+
+.install-card h3 { padding-right: 66px; }
+@media (max-width: 460px) { .install-card h3 { padding-right: 0; } }

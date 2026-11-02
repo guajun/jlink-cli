@@ -56,7 +56,8 @@
     <section id="install" class="band">
       <div class="section-heading">
         <p class="eyebrow">Install from GitHub Releases</p>
-        <h2>One-line installers</h2>
+        <h2>1. Install the CLI binary</h2>
+        <p>The CLI binary and Agent Skills are installed separately. These one-line installers install only the binary and do not include skills. Install optional skills with <code>gh skill install</code> below; skills do not install the binary.</p>
       </div>
       <div class="install-grid">
         <article class="install-card">
@@ -71,6 +72,20 @@
           <button class="copy-button" data-copy="curl -fsSL https://github.com/guajun/jlink-cli/releases/latest/download/install.sh | sh" type="button" aria-label="Copy Linux install command">Copy</button>
           <pre><code>curl -fsSL https://github.com/guajun/jlink-cli/releases/latest/download/install.sh | sh</code></pre>
         </article>
+      </div>
+    </section>
+
+    <section id="skills" class="band">
+      <div class="section-heading">
+        <p class="eyebrow">Optional agent setup</p>
+        <h2>2. Install Agent Skills with gh</h2>
+        <p>Use a GitHub CLI version with <code>gh skill install</code> support. This installs skill files only. Install the CLI binary separately using step 1.</p>
+        <p>The <code>jlink-cli</code> skill teaches your agent to use the CLI. For direct SEGGER J-Link Commander workflows, replace the skill name after the repository with <code>jlink-commander</code>. SEGGER J-Link software is also a separate prerequisite.</p>
+      </div>
+      <div class="install-grid">
+        <article class="install-card"><h3>Codex</h3><p>Install the jlink-cli skill for Codex.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user" type="button" aria-label="Copy Codex skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user</code></pre></article>
+        <article class="install-card"><h3>Claude Code</h3><p>Install the jlink-cli skill for Claude Code.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user" type="button" aria-label="Copy Claude Code skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user</code></pre></article>
+        <article class="install-card"><h3>GitHub Copilot</h3><p>Install the jlink-cli skill for GitHub Copilot.</p><button class="copy-button" data-copy="gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user" type="button" aria-label="Copy GitHub Copilot skill install command">Copy</button><pre><code>gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user</code></pre></article>
       </div>
     </section>
 

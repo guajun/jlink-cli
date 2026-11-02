@@ -26,21 +26,7 @@ Install the latest local source build:
 go install ./cmd/jlink-cli
 ```
 
-Install the bundled skills for local agent hosts:
-
-```powershell
-jlink-cli skill install --skill all --agent copilot --json
-jlink-cli skill install --skill all --agent claude-code --json
-jlink-cli skill install --skill all --agent codex --json
-```
-
-Default local skill locations:
-
-- GitHub Copilot: `~/.copilot/skills/<skill-name>/SKILL.md`
-- Claude Code: `~/.claude/skills/<skill-name>/SKILL.md`
-- Codex: `~/.codex/skills/<skill-name>/SKILL.md`
-
-Use GitHub CLI when provenance, updates, pinning, or broader host support is needed:
+Install skills separately with GitHub CLI (`gh` with `skill install` support). The CLI binary and skills are installed independently; neither installs the other. The CLI has no built-in skill installer.
 
 ```powershell
 gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user
@@ -127,4 +113,4 @@ When helping with `jlink-cli`, include:
 - The exact command to run, including `--serial` in multi-probe setups.
 - Whether `--yes` is needed and why.
 - The expected JSON result shape or important fields.
-- Any installed skill path when using `jlink-cli skill install`.
+- Use `gh skill install` for skill setup; install the CLI binary separately.
