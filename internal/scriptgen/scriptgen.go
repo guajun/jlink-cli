@@ -39,7 +39,7 @@ type MemoryReadOptions struct {
 type FlashOptions struct {
 	TargetOptions
 	File    string
-	Address uint64
+	Address *uint64 // nil uses embedded image addresses; raw images require an explicit address
 	Verify  bool
 	Reset   bool
 }
@@ -57,7 +57,10 @@ func ProbeScript() Script {
 }
 
 func ConnectScript(opts TargetOptions) (Script, error) {
-	commands := targetPrelude(opts)
+	commands, err := targetPrelude(opts)
+	if err != nil {
+		return Script{}, err
+	}
 	commands = append(commands, "q")
 	return build(TargetSession, commands), nil
 }
@@ -67,7 +70,10 @@ func TargetControlScript(opts TargetOptions, action string) (Script, error) {
 	if normalized != "reset" && normalized != "halt" && normalized != "go" {
 		return Script{}, fmt.Errorf("target action must be reset, halt, or go")
 	}
-	commands := targetPrelude(opts)
+	commands, err := targetPrelude(opts)
+	if err != nil {
+		return Script{}, err
+	}
 	commands = append(commands, normalized, "q")
 	return build(TargetSession, commands), nil
 }
@@ -76,16 +82,37 @@ func FlashScript(opts FlashOptions) (Script, error) {
 	if strings.TrimSpace(opts.File) == "" {
 		return Script{}, fmt.Errorf("missing firmware file")
 	}
-	commands := targetPrelude(opts.TargetOptions)
+	commands, err := targetPrelude(opts.TargetOptions)
+	if err != nil {
+		return Script{}, err
+	}
 	if opts.Reset {
 		commands = append(commands, "reset")
 	}
-	commands = append(commands, fmt.Sprintf("loadfile %s, %s", opts.File, formatHex(opts.Address)))
+	load := "loadfile " + opts.File
+	if !HasEmbeddedAddresses(opts.File) {
+		if opts.Address == nil {
+			return Script{}, fmt.Errorf("address is required for raw images; resolve it from project configuration or provide --address")
+		}
+		load += ", " + formatHex(*opts.Address)
+	}
+	commands = append(commands, load)
 	if opts.Verify && canVerifyBin(opts.File) {
-		commands = append(commands, fmt.Sprintf("verifybin %s, %s", opts.File, formatHex(opts.Address)))
+		commands = append(commands, fmt.Sprintf("verifybin %s, %s", opts.File, formatHex(*opts.Address)))
 	}
 	commands = append(commands, "q")
 	return build(Destructive, commands), nil
+}
+
+// HasEmbeddedAddresses identifies the addressed formats supported by Commander.
+// Their load locations come from the image, not the optional loadfile address.
+func HasEmbeddedAddresses(file string) bool {
+	switch strings.ToLower(filepath.Ext(strings.TrimSpace(file))) {
+	case ".elf", ".hex", ".mot", ".s", ".s19", ".s37", ".srec":
+		return true
+	default:
+		return false
+	}
 }
 
 func canVerifyBin(file string) bool {
@@ -99,7 +126,10 @@ func MemoryReadScript(opts MemoryReadOptions) (Script, error) {
 	if opts.Width != 8 && opts.Width != 16 && opts.Width != 32 {
 		return Script{}, fmt.Errorf("width must be one of 8, 16, or 32")
 	}
-	commands := targetPrelude(opts.TargetOptions)
+	commands, err := targetPrelude(opts.TargetOptions)
+	if err != nil {
+		return Script{}, err
+	}
 	if opts.Halt {
 		commands = append(commands, "halt")
 	}
@@ -116,7 +146,10 @@ func BreakpointScript(opts BreakpointOptions) (Script, error) {
 	if action != "set" && action != "clear" {
 		return Script{}, fmt.Errorf("breakpoint action must be set or clear")
 	}
-	commands := targetPrelude(opts.TargetOptions)
+	commands, err := targetPrelude(opts.TargetOptions)
+	if err != nil {
+		return Script{}, err
+	}
 	if opts.Halt {
 		commands = append(commands, "halt")
 	}
@@ -132,14 +165,17 @@ func BreakpointScript(opts BreakpointOptions) (Script, error) {
 	return build(TargetSession, commands), nil
 }
 
-func targetPrelude(opts TargetOptions) []string {
+func targetPrelude(opts TargetOptions) ([]string, error) {
+	if strings.TrimSpace(opts.Device) == "" {
+		return nil, fmt.Errorf("device is required; specify --device using the project's J-Link device name")
+	}
 	return []string{
 		"ExitOnError 1",
-		"Device " + defaultString(opts.Device, "STM32H750VB"),
+		"Device " + strings.TrimSpace(opts.Device),
 		"SelectInterface " + strings.ToUpper(defaultString(opts.Interface, "SWD")),
 		"Speed " + defaultString(opts.Speed, "4000"),
 		"connect",
-	}
+	}, nil
 }
 
 func build(classification Classification, commands []string) Script {

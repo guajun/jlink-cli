@@ -14,7 +14,6 @@ import (
 	"github.com/guajun/jlink-cli/internal/buildinfo"
 	"github.com/guajun/jlink-cli/internal/jlink"
 	"github.com/guajun/jlink-cli/internal/protocol"
-	"github.com/guajun/jlink-cli/internal/scriptgen"
 )
 
 const (
@@ -135,7 +134,7 @@ func runInspect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 
 func runConnect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
 	fs := newFlagSet("connect")
-	device := fs.String("device", "", "J-Link device name, for example STM32H750VB")
+	device := fs.String("device", "", "required J-Link device name")
 	targetInterface := fs.String("interface", "SWD", "target interface, for example SWD or JTAG")
 	speed := fs.String("speed", "4000", "target interface speed in kHz or adaptive")
 	serial := fs.String("serial", "", "optional J-Link serial number")
@@ -148,7 +147,7 @@ func runConnect(args []string, jsonOutput *bool) (int, any, []protocol.Diagnosti
 		return ExitUsage, nil, nil, usageError(err)
 	}
 	if strings.TrimSpace(*device) == "" {
-		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_device", Message: "connect requires --device, for example --device STM32H750VB", Exit: ExitUsage}
+		return ExitUsage, nil, nil, &cliError{Code: "usage.missing_device", Message: "connect requires --device using the project's J-Link device name", Exit: ExitUsage}
 	}
 	timeout, err := time.ParseDuration(*timeoutValue)
 	if err != nil {
@@ -201,17 +200,48 @@ func runAgent(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic,
 		return ExitUsage, nil, nil, &cliError{Code: "protocol.invalid_json", Message: err.Error(), Exit: ExitUsage}
 	}
 	requestText := requestString(request)
+	if strings.EqualFold(requestText, "flash") {
+		// Structured requests use the same validation and execution path as flash.
+		var flashRequest struct {
+			Arguments struct {
+				Device    string `json:"device"`
+				File      string `json:"file"`
+				Address   string `json:"address"`
+				Interface string `json:"interface"`
+				Speed     string `json:"speed"`
+				Serial    string `json:"serial"`
+				JLinkPath string `json:"jlink_path"`
+				Timeout   string `json:"timeout"`
+				Verify    *bool  `json:"verify"`
+				Reset     *bool  `json:"reset"`
+			} `json:"arguments"`
+		}
+		if err := json.Unmarshal([]byte(*input), &flashRequest); err != nil {
+			return ExitUsage, nil, nil, &cliError{Code: "protocol.invalid_request", Message: err.Error(), Exit: ExitUsage}
+		}
+		a := flashRequest.Arguments
+		flashArgs := []string{"--device", a.Device, "--file", a.File, "--address", a.Address}
+		for _, option := range []struct{ name, value string }{
+			{"interface", a.Interface}, {"speed", a.Speed}, {"serial", a.Serial},
+			{"jlink-path", a.JLinkPath}, {"timeout", a.Timeout},
+		} {
+			if option.value != "" {
+				flashArgs = append(flashArgs, "--"+option.name, option.value)
+			}
+		}
+		if a.Verify != nil {
+			flashArgs = append(flashArgs, fmt.Sprintf("--verify=%t", *a.Verify))
+		}
+		if a.Reset != nil {
+			flashArgs = append(flashArgs, fmt.Sprintf("--reset=%t", *a.Reset))
+		}
+		if *yes {
+			flashArgs = append(flashArgs, "--yes")
+		}
+		return runScriptFlash(flashArgs, jsonOutput)
+	}
 	if strings.Contains(strings.ToLower(requestText), "flash") {
-		file := firstExistingRequestPath(requestText)
-		if strings.TrimSpace(file) == "" {
-			return ExitUsage, nil, nil, &cliError{Code: "run.unsupported_request", Message: "flash request requires a firmware path", Exit: ExitUsage}
-		}
-		script, err := scriptgen.FlashScript(scriptgen.FlashOptions{TargetOptions: scriptgen.TargetOptions{Device: "STM32H750VB", Interface: "SWD", Speed: "4000"}, File: file, Address: 0x08000000, Verify: true})
-		if err != nil {
-			return ExitUsage, nil, nil, &cliError{Code: "run.invalid_plan", Message: err.Error(), Exit: ExitUsage}
-		}
-		flags := scriptFlags{jlinkPath: stringPtr(""), timeout: stringPtr("60s"), yes: yes}
-		return finishScript(script, flags)
+		return ExitUsage, nil, nil, &cliError{Code: "run.unsupported_request", Message: "use action flash with device and file arguments (plus address for BIN), or the flash command; target settings are not inferred from natural language", Exit: ExitUsage}
 	}
 
 	return ExitOK, map[string]any{
@@ -228,21 +258,6 @@ func requestString(request map[string]any) string {
 		}
 	}
 	return ""
-}
-
-func firstExistingRequestPath(text string) string {
-	for _, field := range strings.Fields(text) {
-		trimmed := strings.Trim(field, "'\"` ,")
-		lower := strings.ToLower(trimmed)
-		if strings.HasSuffix(lower, ".elf") || strings.HasSuffix(lower, ".bin") || strings.HasSuffix(lower, ".hex") {
-			return trimmed
-		}
-	}
-	return ""
-}
-
-func stringPtr(value string) *string {
-	return &value
 }
 
 func newFlagSet(name string) *flag.FlagSet {

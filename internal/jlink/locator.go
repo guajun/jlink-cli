@@ -108,9 +108,9 @@ func candidatePaths(explicit string, env []string) []pathSource {
 
 func executableNames() []string {
 	if runtime.GOOS == "windows" {
-		return []string{"JLink.exe", "JLinkCL.exe", "JLinkExe.exe", "JLinkGDBServerCL.exe"}
+		return []string{"JLink.exe", "JLinkCL.exe", "JLinkExe.exe"}
 	}
-	return []string{"JLinkExe", "JLink", "JLinkGDBServerCLExe"}
+	return []string{"JLinkExe", "JLink"}
 }
 
 func knownDirs(env []string) []string {

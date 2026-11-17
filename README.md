@@ -2,7 +2,7 @@
 
 `jlink-cli` is a Go-first, binary-distributed command-line interface for AI agents that need predictable access to SEGGER J-Link tooling.
 
-The first prototype is intentionally non-invasive: `doctor` only inspects local executable paths and `run` only parses an agent request. Commands that open or occupy a physical J-Link session should be added behind explicit flags and tested only with user approval.
+`doctor` only inspects local executable paths. Target operations generate a plan by default and execute only with `--yes`; hardware tests require authorization for the selected target and operation.
 
 ## Goals
 
@@ -48,22 +48,28 @@ go run ./cmd/jlink-cli doctor --json
 jlink-cli version --json
 jlink-cli doctor --json
 jlink-cli inspect --json
-jlink-cli connect --device STM32H750VB --interface SWD --speed 4000 --serial 123456789 --dry-run
+jlink-cli connect --device $Device --interface $Interface --speed $Speed --serial $Serial --dry-run
 jlink-cli script probe --json
-jlink-cli script connect --json
-jlink-cli script flash --file build/app.elf --address 0x08000000 --json
-jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --serial 123456789 --json
-jlink-cli script breakpoint-set --address 0x08000100 --serial 123456789 --json
-jlink-cli flash --device STM32H750VB --file firmware.bin --address 0x08000000 --verify
-jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --serial 123456789
-jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --halt
-jlink-cli target halt --device STM32H750VB
-jlink-cli target run --device STM32H750VB
-jlink-cli target reset --device STM32H750VB
+jlink-cli script connect --device $Device --interface $Interface --speed $Speed --json
+jlink-cli script flash --device $Device --interface $Interface --speed $Speed --file build/app.elf --json
+jlink-cli script memory-read --device $Device --interface $Interface --speed $Speed --address $MemoryAddress --length 16 --width 8 --serial $Serial --json
+jlink-cli script breakpoint-set --device $Device --interface $Interface --speed $Speed --address $BreakpointAddress --serial $Serial --json
+jlink-cli flash --device $Device --interface $Interface --speed $Speed --file build/app.bin --address $FlashAddress --verify
+jlink-cli memory read --device $Device --interface $Interface --speed $Speed --address $MemoryAddress --length 16 --width 8 --serial $Serial
+jlink-cli memory read --device $Device --interface $Interface --speed $Speed --address $MemoryAddress --length 16 --width 8 --halt
+jlink-cli target halt --device $Device --interface $Interface --speed $Speed
+jlink-cli target run --device $Device --interface $Interface --speed $Speed
+jlink-cli target reset --device $Device --interface $Interface --speed $Speed
 jlink-cli run --input '{"action":"ping"}'
 ```
 
-`doctor` searches, in order, explicit flags, environment variables, `PATH`, and common SEGGER install directories. It does not connect to an attached device.
+The PowerShell variables above are placeholders to populate from the actual board/project configuration. There is no default chip or flash address: all target script commands require `--device`, and raw BIN flashing requires a resolved `--address` (zero is valid). ELF, HEX, MOT, S, S19, S37, and SREC use embedded locations, so omit `--address`. A supplied address is ignored for these formats and reported as `flash.address_ignored`; it does not relocate the image. The CLI retains SWD and 4000 kHz as compatibility defaults; explicitly select the interface and speed appropriate to your board. `examples/connect-stm32h750vb.json` is a board-specific example, not a default configuration.
+
+For BIN, the agent should first resolve placement from the relevant linker/scatter file, partition table, map file, or build/download configuration, distinguishing flash load addresses from RAM execution addresses. Account for application offsets, packaging, and external flash. Report the configuration used as evidence. If the project cannot establish the location, use the exact chip's documented flash regions and board configuration to offer supported candidates; ask only when the intended placement remains unknown or ambiguous. The CLI itself does not scan project files or maintain a chip-address database, and never substitutes a universal flash base.
+
+Address handling follows [SEGGER's LoadFile documentation](https://kb.segger.com/J-Link_Commander#LoadFile): the optional address applies to BIN, while addressed formats use their own locations.
+
+`doctor` searches, in order, explicit flags, environment variables, common SEGGER install directories, and `PATH`. It does not connect to an attached device.
 
 `connect` prepares a J-Link Commander session using a short script containing `connect` and `q`. It defaults to dry-run behavior unless `--yes` is passed, so agents can inspect the exact command before opening an exclusive physical probe session.
 
@@ -75,11 +81,26 @@ All target-session commands accept `--serial <number>` to select one probe in a 
 
 `flash --verify` emits `verifybin` only for raw `.bin` images. ELF, HEX, SREC, and MOT files are loaded with `loadfile` without `verifybin`, because J-Link Commander verifies raw binaries differently from structured image formats.
 
-`memory read` has two modes. The default live mode does not issue `h` before reading; it is intended to approximate non-blocking reads for addresses that J-Link can access while the MCU is running. Passing `--halt` emits a halt/read/resume script for the stopped-at-breakpoint case.
+`memory read` has two modes. The default live mode does not issue `h` before reading; it is intended to approximate non-blocking reads for addresses that J-Link can access while the MCU is running. Passing `--halt` emits a halt/read/resume script, including when the target was already stopped. Use a custom Commander script if it must remain halted. Read lengths count access units: width 32 and length 4 read 16 bytes. Reads from peripheral registers may have side effects.
 
 `flash program` and `breakpoint` are potentially destructive or exclusive operations. They also default to dry-run behavior and require `--yes` before the target is touched.
 
-`callstack` prepares a GDB Server plus `arm-none-eabi-gdb` backtrace command for the case where the MCU is already halted at a breakpoint. In this version it returns the command plan as JSON rather than starting the long-running server itself.
+`run` accepts an explicit structured flash request and shares the `flash` validation/execution path. Natural-language flash requests are rejected rather than assigned a chip, address, or probe:
+
+```json
+{
+  "action": "flash",
+  "arguments": {
+    "device": "<project J-Link device name>",
+    "file": "build/app.elf",
+    "interface": "<board interface>",
+    "speed": "<supported speed>",
+    "serial": "<selected probe serial>"
+  }
+}
+```
+
+Replace the placeholders before use. `device` and `file` are required strings. BIN also requires an `address` string resolved from the project or user input; addressed images omit it. Optional settings are `interface`, `speed`, `serial`, `jlink_path`, `timeout`, `verify`, and `reset`. Only an explicit `run --yes` executes the plan. Other prototype requests such as `ping` are parsed without hardware access.
 
 ## Agent skills (install separately)
 

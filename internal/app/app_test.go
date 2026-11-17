@@ -216,7 +216,7 @@ func TestScriptMemoryReadRequiresConfirmation(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"script", "memory-read", "--address", "0x20000000", "--length", "16", "--width", "8", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"script", "memory-read", "--device", "NRF52840_XXAA", "--address", "0x20000000", "--length", "16", "--width", "8", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -249,15 +249,15 @@ func TestTargetCommandsAcceptSerial(t *testing.T) {
 	}{
 		{
 			name: "memory read",
-			args: []string{"memory", "read", "--address", "0x20000000", "--length", "16", "--serial", "123456789", "--json"},
+			args: []string{"memory", "read", "--device", "NRF52840_XXAA", "--address", "0x20000000", "--length", "16", "--serial", "123456789", "--json"},
 		},
 		{
 			name: "breakpoint set",
-			args: []string{"script", "breakpoint-set", "--address", "0x08000100", "--serial", "123456789", "--json"},
+			args: []string{"script", "breakpoint-set", "--device", "NRF52840_XXAA", "--address", "0x08000100", "--serial", "123456789", "--json"},
 		},
 		{
 			name: "breakpoint clear",
-			args: []string{"script", "breakpoint-clear", "--address", "0x08000100", "--serial", "123456789", "--json"},
+			args: []string{"script", "breakpoint-clear", "--device", "NRF52840_XXAA", "--address", "0x08000100", "--serial", "123456789", "--json"},
 		},
 	}
 
@@ -281,7 +281,7 @@ func TestScriptConnectJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"script", "connect", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"script", "connect", "--device", "NRF52840_XXAA", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -307,7 +307,7 @@ func TestScriptFlashJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"script", "flash", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"script", "flash", "--device", "NRF52840_XXAA", "--address", "0", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -329,11 +329,11 @@ func TestScriptFlashJSON(t *testing.T) {
 	}
 }
 
-func TestRunAcceptsYesForFlashPlan(t *testing.T) {
+func TestRunStructuredFlashPlan(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"run", "--json", "--input", `{"request":"flash build/app.elf to STM32H750VB"}`}, &stdout, &stderr)
+	exitCode := Main([]string{"run", "--json", "--input", `{"action":"flash","arguments":{"device":"NRF52840_XXAA","file":"build/app.elf","address":"0","interface":"JTAG","speed":"1000","serial":"987654321"}}`}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -358,7 +358,7 @@ func TestFlashProgramAliasJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"flash", "program", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"flash", "program", "--device", "NRF52840_XXAA", "--address", "0", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -384,7 +384,7 @@ func TestFlashDirectJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"flash", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"flash", "--device", "NRF52840_XXAA", "--address", "0", "--file", "build/app.elf", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -410,7 +410,7 @@ func TestMemoryReadAliasJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"memory", "read", "--address", "0x20000000", "--length", "16", "--width", "8", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"memory", "read", "--device", "NRF52840_XXAA", "--address", "0x20000000", "--length", "16", "--width", "8", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -435,7 +435,7 @@ func TestTargetRunAliasJSON(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := Main([]string{"target", "run", "--json"}, &stdout, &stderr)
+	exitCode := Main([]string{"target", "run", "--device", "NRF52840_XXAA", "--json"}, &stdout, &stderr)
 	if exitCode != ExitOK {
 		t.Fatalf("expected exit 0, got %d: %s", exitCode, stderr.String())
 	}
@@ -453,5 +453,112 @@ func TestTargetRunAliasJSON(t *testing.T) {
 	}
 	if !response.OK || !strings.Contains(response.Result.Script.Text, "go\nq") {
 		t.Fatalf("unexpected response: %#v", response)
+	}
+}
+
+func TestTargetCommandsRequireDevice(t *testing.T) {
+	commands := [][]string{
+		{"connect", "--dry-run"}, {"script", "connect"},
+		{"script", "flash", "--file", "firmware.bin", "--address", "0"},
+		{"flash", "--file", "firmware.bin", "--address", "0"},
+		{"memory", "read", "--address", "0", "--length", "1"},
+		{"script", "memory-read", "--address", "0", "--length", "1"},
+		{"target", "halt"}, {"target", "run"}, {"target", "reset"},
+		{"script", "breakpoint-set", "--address", "0"},
+		{"script", "breakpoint-clear", "--address", "0"},
+	}
+	for _, args := range commands {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			if code := Main(append(args, "--json"), &out, &errOut); code != ExitUsage {
+				t.Fatalf("expected usage error, got %d: %s %s", code, &out, &errOut)
+			}
+			if !strings.Contains(out.String(), "device") || strings.Contains(out.String(), "STM32H750VB") {
+				t.Fatalf("expected missing-device diagnostic without fallback: %s", &out)
+			}
+		})
+	}
+}
+
+func TestRawFlashRequiresExplicitAddress(t *testing.T) {
+	for _, prefix := range [][]string{{"flash"}, {"flash", "program"}, {"script", "flash"}} {
+		var out, errOut bytes.Buffer
+		args := append(prefix, "--device", "NRF52840_XXAA", "--file", "firmware.bin", "--json")
+		if code := Main(args, &out, &errOut); code != ExitUsage || !strings.Contains(out.String(), "usage.missing_address") {
+			t.Fatalf("expected missing address, got %d: %s %s", code, &out, &errOut)
+		}
+	}
+}
+
+func TestRunDoesNotInferFlashSettings(t *testing.T) {
+	for _, input := range []string{
+		`{"request":"flash firmware.bin to another board"}`,
+		`{"request":"do not flash firmware.bin"}`,
+		`{"action":"flash","arguments":{"file":"firmware.bin","address":"0"}}`,
+		`{"action":"flash","arguments":{"file":"firmware.bin","device":"NRF52840_XXAA"}}`,
+	} {
+		var out, errOut bytes.Buffer
+		if code := Main([]string{"run", "--input", input, "--yes", "--json"}, &out, &errOut); code != ExitUsage {
+			t.Fatalf("expected usage error before execution, got %d: %s %s", code, &out, &errOut)
+		}
+	}
+}
+
+func TestFlashAddressedImagesWithoutAddress(t *testing.T) {
+	for _, ext := range []string{"elf", "hex", "mot", "s", "s19", "s37", "srec", "ELF"} {
+		file := "build/firmware." + ext
+		commands := [][]string{
+			{"flash", "--device", "custom", "--file", file},
+			{"flash", "program", "--device", "custom", "--file", file},
+			{"script", "flash", "--device", "custom", "--file", file},
+			{"run", "--input", `{"action":"flash","arguments":{"device":"custom","file":"` + file + `"}}`},
+		}
+		for _, args := range commands {
+			var out, errOut bytes.Buffer
+			if code := Main(append(args, "--json"), &out, &errOut); code != ExitOK {
+				t.Fatalf("expected embedded-address plan: %v: %d %s %s", args, code, &out, &errOut)
+			}
+			var response struct {
+				Result struct {
+					Script struct {
+						Commands []string `json:"commands"`
+					} `json:"script"`
+				} `json:"result"`
+			}
+			if err := json.Unmarshal(out.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, command := range response.Result.Script.Commands {
+				if command == "loadfile "+file {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("expected loadfile without an address: %s", &out)
+			}
+		}
+	}
+}
+
+func TestFlashIgnoredAddressDiagnostic(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := Main([]string{"flash", "--device", "custom", "--file", "firmware.elf", "--address", "0x1234", "--json"}, &out, &errOut)
+	if code != ExitOK || !strings.Contains(out.String(), "flash.address_ignored") || strings.Contains(out.String(), "loadfile firmware.elf,") {
+		t.Fatalf("expected embedded locations and ignored-address diagnostic: %d %s %s", code, &out, &errOut)
+	}
+}
+
+func TestRawFlashZeroAndInvalidAddress(t *testing.T) {
+	for _, address := range []string{"0", "invalid"} {
+		var out, errOut bytes.Buffer
+		code := Main([]string{"flash", "--device", "custom", "--file", "firmware.bin", "--address", address, "--json"}, &out, &errOut)
+		if address == "0" {
+			if code != ExitOK || !strings.Contains(out.String(), "loadfile firmware.bin, 0x0") {
+				t.Fatalf("zero address failed: %s %s", &out, &errOut)
+			}
+		} else if code != ExitUsage {
+			t.Fatalf("invalid address accepted: %s", &out)
+		}
 	}
 }
