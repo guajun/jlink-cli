@@ -1,6 +1,6 @@
 ---
 name: jlink-cli
-description: "Install, discover, generate scripts with, or run the jlink-cli tool for SEGGER J-Link workflows."
+description: "Discover the J-Link environment, generate Commander scripts, and run structured J-Link workflows with jlink-cli."
 ---
 
 # jlink-cli
@@ -33,21 +33,9 @@ Project and chip inference is performed by the agent using available files/docum
 
 Generate and inspect a plan before execution. Include `--yes` only for an authorized operation. Avoid repeating confirmation already given for that operation; ask again if the target or effects materially change.
 
-## Install and discover
+## Check environment
 
-Choose installation steps for the requested task and host. From a local source checkout with Go installed:
-
-```sh
-go install ./cmd/jlink-cli
-```
-
-CLI binaries and skills install separately. For skill installation, use GitHub CLI with `skill install` support, choosing the user's agent and scope:
-
-```sh
-gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user
-```
-
-Use `claude-code` or `github-copilot` instead when appropriate. Do not reinstall tools or skills as a prerequisite to every session.
+Check that `jlink-cli` is available, then inspect its version and discover SEGGER Commander:
 
 ```sh
 jlink-cli version --json
@@ -56,6 +44,8 @@ jlink-cli inspect --json
 ```
 
 Discover the Commander executable with `doctor`; use `--jlink-path` for a nonstandard location. Do not assume a fixed Windows install directory. On Unix Commander is commonly named `JLinkExe`; on Windows distinguish SEGGER `JLink.exe` from the Java JDK's unrelated `jlink.exe`.
+
+If a dependency is missing, consult the [installation instructions](https://github.com/guajun/jlink-cli/blob/main/README.md#install-from-source) and handle setup within the current task and existing authorization. The CLI binary, this skill, and SEGGER J-Link software are installed separately. Do not reinstall available dependencies or assume a source checkout is present.
 
 ## Generate and run
 
@@ -92,5 +82,3 @@ Pass `--serial $Serial` on every relevant command when selecting a specific prob
 ## Results
 
 Use JSON for agent-readable CLI results. Report the generated script or executed operation, relevant target/probe settings, and errors or useful output. Preserve raw Commander output when diagnosing failures; do not infer success solely from the process having started.
-
-If `go install` succeeded but the CLI is unavailable, check `go env GOBIN` and `go env GOPATH` and the host's PATH configuration.

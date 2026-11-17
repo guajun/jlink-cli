@@ -18,6 +18,14 @@
 go install github.com/guajun/jlink-cli/cmd/jlink-cli@latest
 ```
 
+To install a local source checkout, run this from the repository root with Go installed:
+
+```powershell
+go install ./cmd/jlink-cli
+```
+
+If installation succeeds but `jlink-cli` is unavailable, check `go env GOBIN` and `go env GOPATH`. Add `GOBIN` to your shell's `PATH`, or the `bin` directory under `GOPATH` when `GOBIN` is empty.
+
 ## Install from release
 
 Windows PowerShell:
