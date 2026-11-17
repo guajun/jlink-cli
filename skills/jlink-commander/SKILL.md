@@ -1,62 +1,38 @@
 ---
 name: jlink-commander
-description: "Use when: generating or running SEGGER J-Link Commander / JLinkExe scripts for AI-agent-safe probe diagnostics, target connect, memory read, flash programming, breakpoint control, or MCU debug automation."
+description: "Generate or run SEGGER J-Link Commander / JLinkExe scripts for probe diagnostics, target connection, memory access, flash programming, or breakpoint control."
 ---
 
-# J-Link Commander Skill
+# J-Link Commander
 
-Use this skill to plan, generate, dry-run, and optionally execute SEGGER J-Link Commander (`JLink.exe`, `JLinkExe`) scripts.
+Prefer `jlink-cli` for supported workflows when it is available. Use direct Commander when needed for unsupported operations or custom scripts.
 
-## Safety Model
+## Resolve the environment and target
 
-Classify every requested operation before running tools.
+Find the installed SEGGER Commander through `jlink-cli doctor --json`, host configuration, or known SEGGER installation locations. Use the resolved executable path: Windows commonly uses `JLink.exe`, Linux/macOS `JLinkExe`. Do not assume a fixed directory or confuse it with Java's `jlink.exe`.
 
-- Probe-only operations: May run without asking the user. These can open the J-Link probe but must not connect to the target MCU. Examples: `ShowEmuList`, `ShowHWStatus`, `ShowFWInfo`, `USB`, `q`.
-- Target-session operations: Ask the user before running. These connect to or control the MCU. Examples: `Device`, `SelectInterface`, `Speed`, `connect`, `mem8`, `mem16`, `mem32`, `regs`, `halt`, `go`, `SetBP`, `ClearBP`.
-- Destructive operations: Ask the user with an explicit warning before running. Examples: `loadfile`, `erase`, `write`, `wreg`, `Power Off`, flash programming, and reset when it may affect an active workflow.
+There is no default chip, interface, speed, memory map, architecture, or flash address for this skill. Use the user's target and project configuration. Probe enumeration cannot identify the attached MCU model. Resolve missing settings before generating a target script; ask only when they cannot be established from available context.
 
-Always show the exact command or script before any target-session or destructive execution.
+## Resolve flash placement
 
-## Preferred Execution Pattern
+- For ELF, HEX, MOT, S, S19, S37, and SREC images, use the addresses embedded in the file. Omit `--address`; Commander does not use it to relocate these formats. Inspect image sections/segments when placement needs validation.
+- For BIN, first inspect the relevant project's linker script/scatter file, partition table, map file, and build/download configuration. Use the load/program address for the specific image, not a RAM execution address or ELF entry point. Account for bootloader/application offsets, image packaging, and external flash. If there is one unambiguous placement, pass that value as `--address` and report its source; do not ask the user to repeat information already available.
+- If only the exact chip is known, consult its documented programmable memory regions (and board configuration for external flash) to narrow down candidates. Explain each candidate and its source. A flash-region base alone does not establish this image's application offset; do not silently select it when several placements remain possible.
+- Ask only for unresolved placement information or a choice between supported candidates. Conflicting configurations must be resolved rather than taking the first match. Explicit user placement takes precedence for BIN; check it against the known memory map and image size.
 
-Prefer `jlink-cli` for supported workflows because it provides structured JSON, confirmation gates, and `--serial` selection for target commands. Use direct Commander when the CLI is unavailable or the requested operation is unsupported.
+Project and chip inference is performed by the agent using available files/documentation. The CLI does not automatically scan arbitrary projects or contain a chip-address database: it requires a resolved BIN address, accepts zero, and never falls back to a universal address.
 
-Prefer a temporary CommanderScript over a long interactive session:
+## Effects and authorization
 
-```powershell
-& "C:\Program Files\SEGGER\JLink\JLink.exe" -NoGui 1 -CommanderScript .\script.jlink
-```
+Probe enumeration with `ShowEmuList` opens a probe-only workflow. Target connection, memory access, halt/resume, breakpoints, flashing, writes, and resets can affect the target. Memory-mapped peripheral reads may have side effects.
 
-Use stdin piping only for very small probe-only experiments:
+Generate and inspect scripts before execution. Use existing authorization for the requested target and effects. When it is absent, show the exact script/command and describe the effects before asking. Do not require repeated confirmation for an already authorized operation.
 
-```powershell
-@("ShowEmuList", "q") | & "C:\Program Files\SEGGER\JLink\JLink.exe" -NoGui 1
-```
+Start scripts with `ExitOnError 1` unless the workflow needs otherwise. Prefer temporary CommanderScript files for reproducible operations.
 
-## Multi-Probe Selection
+## Probe selection
 
-Run `ShowEmuList` first and record the serial-to-board mapping. This is probe-only and does not connect to an MCU.
-
-For `jlink-cli`, select the probe with `--serial`:
-
-```powershell
-jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --serial 123456789 --json
-jlink-cli script breakpoint-set --address 0x08000100 --serial 123456789 --json
-```
-
-For direct Commander, select it with the executable argument `-SelectEmuBySN`:
-
-```powershell
-& "C:\Program Files\SEGGER\JLink\JLink.exe" -NoGui 1 -SelectEmuBySN 123456789 -CommanderScript .\script.jlink
-```
-
-Probe selection is not a CommanderScript command. Do not place `SelectEmuBySN` in the script body, and do not guess a serial number.
-
-## Script Template
-
-Start scripts with `ExitOnError 1` unless there is a specific reason not to.
-
-Probe-only script:
+Probe-only enumeration script:
 
 ```text
 ExitOnError 1
@@ -64,102 +40,54 @@ ShowEmuList
 q
 ```
 
-Target connection script:
+Establish the serial-to-board mapping from user input or hardware evidence. Use a known mapping directly; enumerate when selection is ambiguous. Do not guess a serial number or assume enumeration identifies the MCU.
 
-```text
-ExitOnError 1
-Device STM32H750VB
-SelectInterface SWD
-Speed 4000
-connect
-q
-```
-
-CLI generation:
+With PowerShell variables `$JLink`, `$Serial`, and `$ScriptPath` populated from the actual environment:
 
 ```powershell
-jlink-cli script connect --json
-jlink-cli script flash --file build/app.elf --address 0x08000000 --json
-jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --json
-jlink-cli script breakpoint-set --address 0x08000100 --json
+& $JLink -NoGui 1 -SelectEmuBySN $Serial -CommanderScript $ScriptPath
 ```
 
-Only run target-session or destructive scripts after confirmation:
+POSIX shell equivalent:
+
+```sh
+"$JLINK" -NoGui 1 -SelectEmuBySN "$SERIAL" -CommanderScript "$SCRIPT_PATH"
+```
+
+Omit the serial argument when no specific probe selection is needed. `SelectEmuBySN` is an executable argument, not a CommanderScript command.
+
+## Target scripts
+
+The angle-bracket values below are template placeholders. Replace them from the actual target configuration before execution; do not pass the placeholders literally to Commander.
+
+```text
+ExitOnError 1
+Device <J-Link-device-name>
+SelectInterface <target-interface>
+Speed <supported-speed>
+connect
+q
+```
+
+Insert only the requested operation before `q`:
+
+- Read memory: `mem8 <address>, <count>`, or `mem16` / `mem32` with the number of access units. Match width and count to the target region.
+- Halt and read: insert `halt` before the read. Add `go` only when the requested final state is running; do not automatically resume a target stopped at a breakpoint.
+- Program an addressed image: `loadfile <firmware.elf>` (also HEX/S-record); use its embedded locations. Program raw BIN with `loadfile <firmware.bin>, <resolved-program-address>`. Resolve the BIN placement from the project first, then documented chip/board candidates, asking only if it remains ambiguous.
+- Verify a raw BIN: `verifybin <binary-path>, <program-address>`. Do not apply `verifybin` to ELF, HEX, SREC, or MOT images; it treats input as raw bytes.
+
+For CLI generation, pass explicit target settings. These PowerShell variables must be populated from the project, not example hardware:
 
 ```powershell
-jlink-cli script flash --file build/app.elf --address 0x08000000 --yes --json
+jlink-cli script connect --device $Device --interface $Interface --speed $Speed --json
+jlink-cli script flash --device $Device --interface $Interface --speed $Speed --file build/app.elf --json
+jlink-cli script flash --device $Device --interface $Interface --speed $Speed --file build/app.bin --address $FlashAddress --json
+jlink-cli script memory-read --device $Device --interface $Interface --speed $Speed --address $MemoryAddress --length 16 --width 8 --json
+jlink-cli script breakpoint-set --device $Device --interface $Interface --speed $Speed --address $BreakpointAddress --json
 ```
 
-Live memory read script:
+Add `--serial $Serial` when selecting a probe. CLI commands generate plans by default; `--yes` executes. `memory-read --halt` always emits `go` after reading; use a custom script if the target must stay halted. Breakpoint operations halt by default and resume only with `--run`.
 
-```text
-ExitOnError 1
-Device STM32H750VB
-SelectInterface SWD
-Speed 4000
-connect
-mem8 0x20000000, 0x10
-q
-```
+## Output
 
-Halt/read/resume script:
-
-```text
-ExitOnError 1
-Device STM32H750VB
-SelectInterface SWD
-Speed 4000
-connect
-halt
-mem32 0x20000000, 0x4
-go
-q
-```
-
-Flash programming script:
-
-```text
-ExitOnError 1
-Device STM32H750VB
-SelectInterface SWD
-Speed 4000
-connect
-loadfile firmware.elf, 0x08000000
-q
-```
-
-Use `verifybin` only for raw `.bin` files. Do not generate `verifybin` for `.elf`, `.hex`, `.srec`, or `.mot`; J-Link Commander treats `verifybin` input as a raw binary image.
-
-## Output Parsing Notes
-
-J-Link Commander output includes a banner, prompt echoes, and script status lines. Do not assume stdout is machine-readable.
-
-Useful stable fragments observed on Windows V8.66:
-
-- Banner: `SEGGER J-Link Commander V...`
-- Probe connection: `Connecting to J-Link via USB...O.K.`
-- Serial: `S/N: <serial>`
-- VTref: `VTref=<voltage>V`
-- Probe list: `J-Link[0]: Connection: USB, Serial number: ..., ProductName: ...`
-- Script mode: `J-Link Command File read successfully.` and `Script processing completed.`
-
-For CLI implementation, preserve raw stdout/stderr and add parsed summaries only when patterns are stable.
-
-## Defaults
-
-Use these defaults unless the user says otherwise:
-
-- Device: `STM32H750VB`
-- Interface: `SWD`
-- Speed: `4000`
-- Windows executable: `C:\Program Files\SEGGER\JLink\JLink.exe`
-
-## Agent Response Checklist
-
-When generating a script, include:
-
-- Operation classification: probe-only, target-session, or destructive.
-- Exact script content.
-- Exact execution command, including probe selection in multi-probe setups.
-- Whether user confirmation is required before running.
-- Parsed highlights after execution, plus the raw output location if output is long.
+Commander stdout contains banners, prompt echoes, and script status; it is not a structured protocol. Preserve stdout/stderr. Interpret serial numbers, reference voltage, connection status, and errors in context: wording varies across versions, transports, and hosts. Report useful highlights and retain raw output for diagnostics.

@@ -1,116 +1,96 @@
 ---
 name: jlink-cli
-description: "Use when: installing, discovering, generating scripts with, or safely running the jlink-cli tool for SEGGER J-Link workflows."
+description: "Install, discover, generate scripts with, or run the jlink-cli tool for SEGGER J-Link workflows."
 ---
 
-# jlink-cli Skill
+# jlink-cli
 
-Use this skill when working with the `jlink-cli` command-line tool in this repository or from an installed binary.
+Use the installed binary or this repository's CLI for structured J-Link workflows. SEGGER J-Link software is a separate dependency.
 
-## Safety Model
+## Resolve target settings
 
-Treat `jlink-cli` commands according to what they do:
+There is no default chip or flash address. Determine the exact J-Link device name from the user's request, board/project configuration, or device documentation. Ask for missing information that cannot be established from those sources. Probe enumeration identifies probes, not the attached MCU model.
 
-- Discovery commands: May run without confirmation. Examples: `jlink-cli version --json`, `jlink-cli doctor --json`, `jlink-cli inspect --json`, `jlink-cli script probe --json`.
-- Script generation commands: May run without confirmation because they do not touch the target unless `--yes` is present. Examples: `jlink-cli script connect --json`, `jlink-cli script flash --file build/app.elf --json`, `jlink-cli memory read ...` without `--yes`.
-- Target-session commands: Ask before running with `--yes`. Examples: `connect --yes`, `script connect --yes`, `memory read --yes`, breakpoint changes, `target halt --yes`, and `target reset --yes`.
-- Destructive commands: Ask with an explicit warning before running with `--yes`. Examples: `flash --yes`, `script flash --yes`, erase/write-style J-Link operations, and reset when it may affect an active workflow.
+Use the project's interface, supported speed, memory map, image placement, and access width. Do not assume SWD, 4000 kHz, a particular RAM/flash base, or an ARM architecture applies to every target. The CLI retains SWD and 4000 kHz as compatibility defaults; override them explicitly for the actual board. All target script commands require `--device`. Resolve flash placement using the format-specific rules below.
 
-Always show the exact command before any target-session or destructive execution.
+The examples below use PowerShell variables populated from the actual configuration: `$Device`, `$Interface`, `$Speed`, `$FlashAddress`, `$MemoryAddress`, `$BreakpointAddress`, `$Image`, and `$Serial`. They are placeholders, not predefined values. Adapt syntax to the user's shell.
 
-## Install and Skill Setup
+## Resolve flash placement
 
-Install the latest local source build:
+- For ELF, HEX, MOT, S, S19, S37, and SREC images, use the addresses embedded in the file. Omit `--address`; Commander does not use it to relocate these formats. Inspect image sections/segments when placement needs validation.
+- For BIN, first inspect the relevant project's linker script/scatter file, partition table, map file, and build/download configuration. Use the load/program address for the specific image, not a RAM execution address or ELF entry point. Account for bootloader/application offsets, image packaging, and external flash. If there is one unambiguous placement, pass that value as `--address` and report its source; do not ask the user to repeat information already available.
+- If only the exact chip is known, consult its documented programmable memory regions (and board configuration for external flash) to narrow down candidates. Explain each candidate and its source. A flash-region base alone does not establish this image's application offset; do not silently select it when several placements remain possible.
+- Ask only for unresolved placement information or a choice between supported candidates. Conflicting configurations must be resolved rather than taking the first match. Explicit user placement takes precedence for BIN; check it against the known memory map and image size.
 
-```powershell
+Project and chip inference is performed by the agent using available files/documentation. The CLI does not automatically scan arbitrary projects or contain a chip-address database: it requires a resolved BIN address, accepts zero, and never falls back to a universal address.
+
+## Execution and authorization
+
+- `version`, `doctor`, and `inspect` inspect local information without opening a target session.
+- `script probe` only generates a `ShowEmuList` script. It does not enumerate hardware and does not accept `--yes`.
+- Target commands generate scripts by default. `--yes` opens a physical session and executes the operation.
+- Use existing authorization when it covers the exact target and operation. If authorization is missing, present the exact command/script and its effects before asking. Flashing, writes, resets, halt/resume, and breakpoint changes can affect the active firmware.
+
+Generate and inspect a plan before execution. Include `--yes` only for an authorized operation. Avoid repeating confirmation already given for that operation; ask again if the target or effects materially change.
+
+## Install and discover
+
+Choose installation steps for the requested task and host. From a local source checkout with Go installed:
+
+```sh
 go install ./cmd/jlink-cli
 ```
 
-Install skills separately with GitHub CLI (`gh` with `skill install` support). The CLI binary and skills are installed independently; neither installs the other. The CLI has no built-in skill installer.
+CLI binaries and skills install separately. For skill installation, use GitHub CLI with `skill install` support, choosing the user's agent and scope:
 
-```powershell
-gh skill install guajun/jlink-cli jlink-cli --agent github-copilot --scope user
-gh skill install guajun/jlink-cli jlink-cli --agent claude-code --scope user
+```sh
 gh skill install guajun/jlink-cli jlink-cli --agent codex --scope user
 ```
 
-## Preferred Command Patterns
+Use `claude-code` or `github-copilot` instead when appropriate. Do not reinstall tools or skills as a prerequisite to every session.
 
-Use JSON output for agent-readable results:
-
-```powershell
+```sh
 jlink-cli version --json
 jlink-cli doctor --json
 jlink-cli inspect --json
 ```
 
-Generate scripts before executing them:
+Discover the Commander executable with `doctor`; use `--jlink-path` for a nonstandard location. Do not assume a fixed Windows install directory. On Unix Commander is commonly named `JLinkExe`; on Windows distinguish SEGGER `JLink.exe` from the Java JDK's unrelated `jlink.exe`.
+
+## Generate and run
 
 ```powershell
-jlink-cli script connect --json
-jlink-cli script flash --file build/app.elf --address 0x08000000 --json
-jlink-cli script memory-read --address 0x20000000 --length 16 --width 8 --json
-jlink-cli script breakpoint-set --address 0x08000100 --json
+jlink-cli script connect --device $Device --interface $Interface --speed $Speed --json
+# Addressed image (ELF/HEX/S-record): use embedded addresses
+jlink-cli script flash --device $Device --interface $Interface --speed $Speed --file build/app.elf --json
+# Raw BIN: $FlashAddress has been resolved from the project or user input
+jlink-cli script flash --device $Device --interface $Interface --speed $Speed --file build/app.bin --address $FlashAddress --json
+jlink-cli memory read --device $Device --interface $Interface --speed $Speed --address $MemoryAddress --length 16 --width 8 --json
+jlink-cli script breakpoint-set --device $Device --interface $Interface --speed $Speed --address $BreakpointAddress --json
 ```
 
-Only execute target-session or destructive operations after confirmation:
+The read length is a number of access units, not always bytes: width 32 and length 4 read 16 bytes. Choose an address, width, and count valid for the target. Live reads may affect memory-mapped peripherals; do not treat every address as passive RAM. `memory read --halt` emits halt/read/**resume** even if the target was already stopped. Use a custom Commander script when the target must remain halted. Breakpoint commands halt by default and resume only with `--run`.
+
+`flash --verify` emits `verifybin` only for raw BIN images. Structured image formats do not get a separate `verifybin` command.
+
+For an authorized execution, rerun the reviewed command with `--yes`, preserving the target and probe settings.
+
+`run` accepts structured flash requests with `action: "flash"` and `arguments` containing `device` and `file` (strings), plus `address` for BIN. Omit `address` for addressed images. Optional arguments are `interface`, `speed`, `serial`, `jlink_path`, `timeout`, `verify`, and `reset`. It does not infer hardware or paths from natural language. Prefer the explicit flash command when preparing a request interactively.
+
+## Probe selection
+
+When probe identity is ambiguous, enumerate using Commander without connecting to a target. Set `$JLink` to the resolved SEGGER Commander executable:
 
 ```powershell
-jlink-cli script flash --file build/app.elf --address 0x08000000 --yes --json
+@("ShowEmuList", "q") | & $JLink -NoGui 1
 ```
 
-## Multi-Probe Workflow
+On a POSIX shell, use `printf 'ShowEmuList\nq\n' | "$JLINK" -NoGui 1` with a resolved executable path. Use a serial-to-board mapping supplied by the user or established from the hardware; enumeration alone does not establish that mapping. Do not guess serial numbers or require enumeration when a reliable mapping is already known.
 
-Enumerate attached probes before connecting to any MCU. `jlink-cli script probe --json` generates the probe-only `ShowEmuList` script; to perform enumeration, run the same probe-only operation directly with J-Link Commander:
+Pass `--serial $Serial` on every relevant command when selecting a specific probe. Execution passes `-SelectEmuBySN` as an executable argument, not a script command. Inspect `execution.command.args` when troubleshooting selection.
 
-```powershell
-@("ShowEmuList", "q") | & "C:\Program Files\SEGGER\JLink\JLink.exe" -NoGui 1
-```
+## Results
 
-Map each reported serial number to its board, then pass `--serial <number>` to every target-session command that must use that probe:
+Use JSON for agent-readable CLI results. Report the generated script or executed operation, relevant target/probe settings, and errors or useful output. Preserve raw Commander output when diagnosing failures; do not infer success solely from the process having started.
 
-```powershell
-jlink-cli connect --device STM32H750VB --serial 123456789 --dry-run --json
-jlink-cli memory read --device STM32H750VB --address 0x20000000 --length 16 --width 8 --serial 123456789 --json
-jlink-cli script breakpoint-set --address 0x08000100 --serial 123456789 --json
-jlink-cli script breakpoint-clear --address 0x08000100 --serial 123456789 --json
-jlink-cli target halt --device STM32H750VB --serial 123456789 --json
-jlink-cli flash --device STM32H750VB --file firmware.bin --address 0x08000000 --serial 123456789 --json
-```
-
-The shared target commands support `--serial`: target `script` commands, `flash`, `memory read`, and `target halt|run|reset`. When `--yes` executes an operation, `execution.command.args` must include `-SelectEmuBySN` followed by the selected serial number. The selection is a J-Link executable argument, so it does not appear in the generated CommanderScript text.
-
-Generate and inspect without `--yes` first. After confirmation, rerun the exact command with `--yes`; direct J-Link Commander fallback is not needed for serial-specific memory reads or breakpoint changes.
-
-## Defaults
-
-Unless the user says otherwise, use:
-
-- Device: `STM32H750VB`
-- Interface: `SWD`
-- Speed: `4000`
-- Flash address: `0x08000000`
-
-Do not guess a serial number. Enumerate probes or use a mapping supplied by the user.
-
-## Troubleshooting
-
-If J-Link tools are not found, run:
-
-```powershell
-jlink-cli doctor --json
-```
-
-If the command is unavailable after `go install`, check that `$(go env GOPATH)\bin` is on `PATH`.
-
-If a serial-specific execution selects the wrong probe or no probe, inspect `execution.command.args` and verify the value reported by `ShowEmuList`.
-
-## Agent Response Checklist
-
-When helping with `jlink-cli`, include:
-
-- Whether the requested command is discovery, script generation, target-session, or destructive.
-- The exact command to run, including `--serial` in multi-probe setups.
-- Whether `--yes` is needed and why.
-- The expected JSON result shape or important fields.
-- Use `gh skill install` for skill setup; install the CLI binary separately.
+If `go install` succeeded but the CLI is unavailable, check `go env GOBIN` and `go env GOPATH` and the host's PATH configuration.

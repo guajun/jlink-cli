@@ -64,3 +64,24 @@ func TestAcceptPATHDirRejectsPlainWindowsJDKPath(t *testing.T) {
 		t.Fatalf("expected SEGGER JLink path to be accepted")
 	}
 }
+
+func TestDiscoverDoesNotSelectGDBServer(t *testing.T) {
+	dir := t.TempDir()
+	name := "JLinkGDBServerCLExe"
+	if runtime.GOOS == "windows" {
+		name = "JLinkGDBServerCL.exe"
+	}
+	server := filepath.Join(dir, name)
+	if err := os.WriteFile(server, []byte("test"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	report := Discover(Options{Env: []string{"PATH=" + dir}})
+	if report.Selected == server {
+		t.Fatal("GDB Server cannot run CommanderScript")
+	}
+	for _, candidate := range report.Candidates {
+		if candidate.Path == server {
+			t.Fatal("GDB Server must not be a Commander candidate")
+		}
+	}
+}

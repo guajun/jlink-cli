@@ -100,22 +100,30 @@ func runScriptFlash(args []string, jsonOutput *bool) (int, any, []protocol.Diagn
 	fs := newFlagSet("script flash")
 	flags := addScriptFlags(fs)
 	file := fs.String("file", "", "firmware image path")
-	addressValue := fs.String("address", "0x08000000", "program address")
+	addressValue := fs.String("address", "", "raw image program address; addressed images use embedded locations")
 	verify := fs.Bool("verify", true, "verify programmed flash")
 	reset := fs.Bool("reset", false, "reset before programming")
 	fs.BoolVar(jsonOutput, "json", true, "write JSON output")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage, nil, nil, usageError(err)
 	}
-	address, err := parseRequiredUint("address", *addressValue)
-	if err != nil {
-		return ExitUsage, nil, nil, err
+	var address *uint64
+	if strings.TrimSpace(*addressValue) != "" || !scriptgen.HasEmbeddedAddresses(*file) {
+		value, err := parseRequiredUint("address", *addressValue)
+		if err != nil {
+			return ExitUsage, nil, nil, err
+		}
+		address = &value
 	}
 	script, err := scriptgen.FlashScript(scriptgen.FlashOptions{TargetOptions: targetOptions(flags), File: *file, Address: address, Verify: *verify, Reset: *reset})
 	if err != nil {
 		return ExitUsage, scriptResult{Script: script}, nil, &cliError{Code: "usage.invalid_script", Message: err.Error(), Exit: ExitUsage}
 	}
-	return finishScript(script, flags)
+	status, result, diagnostics, finishErr := finishScript(script, flags)
+	if scriptgen.HasEmbeddedAddresses(*file) && address != nil {
+		diagnostics = append(diagnostics, protocol.Diagnostic{Level: "warning", Code: "flash.address_ignored", Message: "--address does not relocate addressed images; embedded image addresses are used"})
+	}
+	return status, result, diagnostics, finishErr
 }
 
 func runScriptMemoryRead(args []string, jsonOutput *bool) (int, any, []protocol.Diagnostic, error) {
@@ -337,7 +345,7 @@ func scriptBreakpointUsage(action string) string {
 func scriptFlashFlags() string {
 	return "Flags:\n" +
 		"  --file <path>        Firmware image path\n" +
-		"  --address <addr>     Program address (default 0x08000000)\n" +
+		"  --address <addr>     Raw image address (required for BIN; omitted for ELF/HEX/S-record)\n" +
 		"  --verify             Verify programmed flash (default true)\n" +
 		"  --reset              Reset before programming\n" +
 		commonTargetFlagLines()
@@ -357,7 +365,7 @@ func commonTargetFlags() string {
 }
 
 func commonTargetFlagLines() string {
-	return "  --device <name>      J-Link device name (default STM32H750VB)\n" +
+	return "  --device <name>      J-Link device name (required)\n" +
 		"  --interface <name>   Target interface (default SWD)\n" +
 		"  --speed <value>      Target interface speed in kHz (default 4000)\n" +
 		"  --serial <number>    Select a J-Link probe by serial number\n" +
@@ -372,7 +380,7 @@ func addScriptFlags(fs interface {
 	Bool(string, bool, string) *bool
 }) scriptFlags {
 	return scriptFlags{
-		device:       fs.String("device", "STM32H750VB", "J-Link device name"),
+		device:       fs.String("device", "", "required J-Link device name"),
 		interfaceRef: fs.String("interface", "SWD", "target interface"),
 		speed:        fs.String("speed", "4000", "target interface speed in kHz"),
 		serial:       fs.String("serial", "", "optional J-Link serial number"),
